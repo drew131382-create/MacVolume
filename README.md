@@ -16,25 +16,17 @@ macOS 菜单栏逐应用音量调节工具。基于 Core Audio Process Tap（mac
 ## 要求
 
 - macOS 14.2 及以上（依赖 Core Audio Process Tap API）
-- 首次使用需授予**屏幕与系统音频录制**权限（应用会引导授权）
 
 ## 安装
 
 从 [Releases](https://github.com/drew131382-create/MacVolume/releases) 下载 `MacVolume.dmg`，打开后将 `MacVolume.app` 拖入「应用程序」。
 
-> **注意**：应用未使用苹果开发者证书签名（ad-hoc），首次打开可能被 Gatekeeper 拦截。按下面两步完成授权：
-
-**第 1 步：允许运行**
-- 在「应用程序」中找到 `MacVolume.app`，**右键 → 打开**，再点「打开」；
-- 若仍提示"已损坏"或"无法验证开发者"，在终端执行：
-  ```bash
-  xattr -dr com.apple.quarantine /Applications/MacVolume.app
-  ```
-
-**第 2 步：授予屏幕录制权限**
-打开面板后会看到权限提示，点击「打开系统设置」，在 **隐私与安全性 → 屏幕录制** 中勾选 `MacVolume`。**授权后请完全退出（⌘Q）并重新打开应用**，即可正常调节各应用音量。
-
-**要求**：macOS 14.2 及以上。
+> **注意**：应用未使用苹果开发者证书签名（ad-hoc），首次打开时如被 Gatekeeper 拦截，请**右键 → 打开**；若仍提示"已损坏"，在终端执行：
+> ```bash
+> xattr -dr com.apple.quarantine /Applications/MacVolume.app
+> ```
+>
+> 无需任何系统权限（不使用屏幕录制/麦克风），打开即可用。
 
 ## 从源码构建
 

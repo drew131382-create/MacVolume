@@ -10,7 +10,6 @@ class AudioProcessManager: ObservableObject {
     @Published var audioApps: [AudioApp] = []
     @Published var masterVolume: Float = 1.0
     @Published var masterMuted: Bool = false
-    @Published var permissionGranted: Bool = true
 
     private let deviceVolume = DeviceVolume()
     private var tapManager: AudioTapManagerProtocol?
@@ -64,8 +63,7 @@ class AudioProcessManager: ObservableObject {
     ]
 
     init() {
-        permissionGranted = AudioPermissionHelper.checkPermission()
-        NSLog("MacVolume: 启动，屏幕录制权限=\(permissionGranted)")
+        NSLog("MacVolume: 启动，PID=\(ProcessInfo.processInfo.processIdentifier)")
         tapManager = AudioTapManagerFactory.create()
         deviceVolume.onStateChange = { [weak self] in
             self?.syncMasterFromDevice()
@@ -107,7 +105,6 @@ class AudioProcessManager: ObservableObject {
         NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)
             .sink { [weak self] _ in
                 Task { @MainActor [weak self] in
-                    self?.permissionGranted = AudioPermissionHelper.checkPermission()
                     await self?.updateAudioApps()
                 }
             }

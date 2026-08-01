@@ -1,6 +1,4 @@
-import AVFoundation
 import CoreAudio
-import CoreGraphics
 import Darwin
 import Foundation
 
@@ -268,14 +266,5 @@ class AudioTapManagerFallback: AudioTapManagerProtocol {
 
     init() {
         NSLog("MacVolume: AudioTap requires macOS 14.2+")
-    }
-}
-
-// MARK: - Permission Helper
-
-class AudioPermissionHelper {
-    /// 逐应用音量依赖「屏幕与系统音频录制」权限（而非麦克风）
-    static func checkPermission() -> Bool {
-        CGPreflightScreenCaptureAccess()
     }
 }
