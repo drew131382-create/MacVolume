@@ -86,6 +86,7 @@
 			buildConfigurationList = 65335B8EF3C5EE3E83E4F7AF /* Build configuration list for PBXNativeTarget "MacVolume" */;
 			buildPhases = (
 				F3FE6B41224B6ED3A0149727 /* Sources */,
+				AA8E72EED601E166E58A699B /* Copy AppIcon */,
 			);
 			buildRules = (
 			);
@@ -130,6 +131,27 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		AA8E72EED601E166E58A699B /* Copy AppIcon */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Copy AppIcon";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "mkdir -p \"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}\"\ncp \"${SRCROOT}/Resources/AppIcon.icns\" \"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/AppIcon.icns\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		F3FE6B41224B6ED3A0149727 /* Sources */ = {

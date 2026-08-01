@@ -11,7 +11,12 @@ targets:
     sources:
       - Sources
     resources:
-      - Resources
+      - path: Resources/AppIcon.icns
+    postBuildScripts:
+      - name: Copy AppIcon
+        script: |
+          mkdir -p "${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}"
+          cp "${SRCROOT}/Resources/AppIcon.icns" "${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/AppIcon.icns"
     settings:
       base:
         PRODUCT_NAME: MacVolume
@@ -31,6 +36,7 @@ targets:
       path: Info.plist
       properties:
         CFBundleDisplayName: MacVolume
+        CFBundleIconFile: AppIcon
         NSHumanReadableCopyright: ""
         NSAudioCaptureUsageDescription: MacVolume 需要读取各应用的音频数据，以便在本地独立调节每个应用的音量。音频只在设备本地实时混音，不会被录制或上传。
         NSMicrophoneUsageDescription: MacVolume 需要系统音频访问权限来独立控制每个应用的音量。音频不会被录制或上传。
