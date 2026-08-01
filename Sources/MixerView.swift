@@ -55,7 +55,9 @@ struct MixerView: View {
 
     private var appList: some View {
         Group {
-            if manager.visibleApps.isEmpty {
+            if !manager.permissionGranted {
+                permissionBanner
+            } else if manager.visibleApps.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "music.note")
                         .font(.system(size: 28))
@@ -89,6 +91,34 @@ struct MixerView: View {
         }
     }
 
+    private var permissionBanner: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("需要「屏幕与系统音频录制」权限", systemImage: "lock.shield.fill")
+                .font(.caption.bold())
+                .foregroundStyle(.orange)
+            Text("前往 系统设置 → 隐私与安全性 → 屏幕录制，勾选 MacVolume。授权后请完全退出（⌘Q）并重新打开本应用。")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            HStack(spacing: 8) {
+                Button("打开系统设置") {
+                    NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+                Button("退出应用") {
+                    NSApp.terminate(nil)
+                }
+                .controlSize(.small)
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.orange.opacity(0.12))
+        )
+    }
+
     // MARK: - Footer
 
     private var footer: some View {
@@ -108,15 +138,6 @@ struct MixerView: View {
             }
 
             Spacer()
-
-            if !manager.permissionGranted {
-                Button {
-                    NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!)
-                } label: {
-                    Text("授权")
-                        .font(.caption)
-                }
-            }
 
             Button("退出") {
                 NSApp.terminate(nil)

@@ -65,7 +65,7 @@ class AudioProcessManager: ObservableObject {
 
     init() {
         permissionGranted = AudioPermissionHelper.checkPermission()
-        NSLog("MacVolume: 启动，音频权限=\(permissionGranted)")
+        NSLog("MacVolume: 启动，屏幕录制权限=\(permissionGranted)")
         tapManager = AudioTapManagerFactory.create()
         deviceVolume.onStateChange = { [weak self] in
             self?.syncMasterFromDevice()
@@ -73,10 +73,6 @@ class AudioProcessManager: ObservableObject {
         deviceVolume.start()
         syncMasterFromDevice()
         startMonitoring()
-        AudioPermissionHelper.requestPermission { [weak self] granted in
-            NSLog("MacVolume: 权限请求结果 granted=\(granted)")
-            self?.permissionGranted = granted
-        }
     }
 
     /// 把系统输出设备的音量/静音同步到界面
@@ -111,6 +107,7 @@ class AudioProcessManager: ObservableObject {
         NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)
             .sink { [weak self] _ in
                 Task { @MainActor [weak self] in
+                    self?.permissionGranted = AudioPermissionHelper.checkPermission()
                     await self?.updateAudioApps()
                 }
             }
