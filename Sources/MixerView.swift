@@ -157,7 +157,7 @@ struct AppRow: View {
                 HStack(spacing: 6) {
                     ResetSlider(
                         value: volumeBinding,
-                        range: 0...1.0,
+                        range: 0...2.0,
                         onVolumeChange: { onVolumeChange($0) },
                         onDoubleClick: { onResetVolume() }
                     )

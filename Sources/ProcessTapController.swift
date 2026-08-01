@@ -35,7 +35,7 @@ final class ProcessTapController {
 
     var volume: Float {
         get { _volume }
-        set { _volume = max(0, min(1.5, newValue)) }
+        set { _volume = max(0, min(2.0, newValue)) }
     }
 
     var isMuted: Bool {

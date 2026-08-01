@@ -9,7 +9,7 @@ struct AudioApp: Identifiable, Equatable, Hashable {
     let name: String
     let bundleIdentifier: String?
     let icon: NSImage?
-    var volume: Float  // 0.0 - 1.5, 用户设定的音量
+    var volume: Float  // 0.0 - 2.0, 1.0 = 100%（滑块中点）
     var isMuted: Bool
     var additionalPids: Set<pid_t> = []
 

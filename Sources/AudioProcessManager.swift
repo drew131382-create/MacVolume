@@ -159,15 +159,29 @@ class AudioProcessManager: ObservableObject {
                 }
             }
 
-            // 通用 Helper / GPU / Service：从 bundleID 去掉最后一段匹配宿主
-            if name == "GPU" || name.contains("Helper") || name.contains("Service") {
+            // 通用 Helper / GPU / Service：从 bundleID 逐段去掉后缀匹配宿主（大小写不敏感）
+            let lowerName = name.lowercased()
+            let isHelperName = lowerName == "gpu"
+                || lowerName.contains("helper")
+                || lowerName.contains("service")
+                || lowerName.contains("webcontent")
+                || lowerName.contains("networking")
+            let isHelperBundle = bundleID?.lowercased().contains(".helper") == true
+                || bundleID?.lowercased().contains(".gpu") == true
+                || bundleID?.lowercased().contains(".service") == true
+                || bundleID?.lowercased().contains(".webcontent") == true
+                || bundleID?.lowercased().contains(".networking") == true
+
+            if isHelperName || isHelperBundle {
                 if let bid = bundleID {
-                    let parts = bid.components(separatedBy: ".")
-                    if parts.count > 2 {
-                        let potentialParentID = parts.dropLast().joined(separator: ".")
-                        if let parent = runningApps.first(where: { $0.bundleIdentifier == potentialParentID }) {
+                    var parts = bid.components(separatedBy: ".")
+                    while parts.count > 1 {
+                        parts.removeLast()
+                        let candidate = parts.joined(separator: ".")
+                        if let parent = runningApps.first(where: { $0.bundleIdentifier == candidate }) {
                             resolvedApp = parent
-                            groupKey = potentialParentID
+                            groupKey = candidate
+                            break
                         }
                     }
                 }
@@ -276,7 +290,7 @@ class AudioProcessManager: ObservableObject {
     func setVolume(for app: AudioApp, volume: Float) {
         guard let index = audioApps.firstIndex(where: { $0.id == app.id }) else { return }
 
-        let clamped = max(0, min(1.0, volume))
+        let clamped = max(0, min(2.0, volume))
         audioApps[index].volume = clamped
 
         let identifier = app.bundleIdentifier ?? app.name
@@ -387,21 +401,24 @@ class AudioProcessManager: ObservableObject {
             }
         }
 
-        let isHelper = name.contains("Helper")
-            || name.contains("GPU")
-            || name.contains("Service")
-            || name == "Web Content"
-            || bundleID.contains(".Helper")
-            || bundleID.contains(".WebContent")
-            || bundleID.contains(".GPU")
-            || bundleID.contains(".Networking")
+        let lowerName = name.lowercased()
+        let lowerBundle = bundleID.lowercased()
+        let isHelper = lowerName.contains("helper")
+            || lowerName.contains("gpu")
+            || lowerName.contains("service")
+            || lowerName == "web content"
+            || lowerBundle.contains(".helper")
+            || lowerBundle.contains(".webcontent")
+            || lowerBundle.contains(".gpu")
+            || lowerBundle.contains(".networking")
         guard isHelper else { return nil }
 
-        // 1. 从 bundleID 去掉最后一段匹配宿主（com.xxx.YY.Helper → com.xxx.YY）
+        // 1. 从 bundleID 逐段去掉后缀匹配宿主（com.xxx.YY.Helper → com.xxx.YY）
         if !bundleID.isEmpty {
-            let parts = bundleID.components(separatedBy: ".")
-            if parts.count > 2 {
-                let candidate = parts.dropLast().joined(separator: ".")
+            var parts = bundleID.components(separatedBy: ".")
+            while parts.count > 1 {
+                parts.removeLast()
+                let candidate = parts.joined(separator: ".")
                 if let parent = runningApps.first(where: { $0.processIdentifier != app.processIdentifier && $0.bundleIdentifier == candidate }) {
                     return parent
                 }
