@@ -261,6 +261,7 @@ class AudioProcessManager: ObservableObject {
                 name: finalName,
                 bundleIdentifier: groupKey,
                 icon: finalIcon,
+                isOutputting: !group.outputPIDs.isEmpty,
                 volume: volume,
                 isMuted: muted,
                 additionalPids: additional
@@ -269,7 +270,7 @@ class AudioProcessManager: ObservableObject {
             newApps.append(audioApp)
         }
 
-        newApps.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        newApps.sort(by: Self.appSort)
 
         if snapshotChanged {
             let groupDescriptions = appGroups
@@ -377,7 +378,30 @@ class AudioProcessManager: ObservableObject {
     // MARK: - Visibility
 
     var visibleApps: [AudioApp] {
-        audioApps.filter { !isAppHidden($0) }
+        audioApps
+            .filter { !isAppHidden($0) }
+            .sorted(by: Self.appSort)
+    }
+
+    /// 正在输出的应用置顶；同一状态下按名称、Bundle ID、主 PID 稳定排序。
+    private static func appSort(_ lhs: AudioApp, _ rhs: AudioApp) -> Bool {
+        if lhs.isOutputting != rhs.isOutputting {
+            return lhs.isOutputting && !rhs.isOutputting
+        }
+
+        let nameOrder = lhs.name.localizedCaseInsensitiveCompare(rhs.name)
+        if nameOrder != .orderedSame {
+            return nameOrder == .orderedAscending
+        }
+
+        let lhsBundle = lhs.bundleIdentifier ?? ""
+        let rhsBundle = rhs.bundleIdentifier ?? ""
+        let bundleOrder = lhsBundle.localizedCaseInsensitiveCompare(rhsBundle)
+        if bundleOrder != .orderedSame {
+            return bundleOrder == .orderedAscending
+        }
+
+        return lhs.id < rhs.id
     }
 
     private func isAppHidden(_ app: AudioApp) -> Bool {

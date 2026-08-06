@@ -10,6 +10,7 @@ struct AudioApp: Identifiable, Equatable, Hashable {
     let name: String
     let bundleIdentifier: String?
     let icon: NSImage?
+    let isOutputting: Bool
     var volume: Float  // 0.0 - 2.0, 1.0 = 100%（滑块中点）
     var isMuted: Bool
     var additionalPids: Set<pid_t> = []
