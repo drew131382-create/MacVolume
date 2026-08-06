@@ -2,7 +2,12 @@ import SwiftUI
 
 @main
 struct MacVolumeApp: App {
-    @StateObject private var manager = AudioProcessManager()
+    @StateObject private var manager: AudioProcessManager
+
+    init() {
+        AudioProcessEnumerator.runCommandLineModeIfNeeded()
+        _manager = StateObject(wrappedValue: AudioProcessManager())
+    }
 
     var body: some Scene {
         MenuBarExtra {

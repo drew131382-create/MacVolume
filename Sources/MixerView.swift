@@ -63,11 +63,12 @@ struct MixerView: View {
                     Text("暂无可调节的应用")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                    Text("播放声音的应用会自动出现在这里")
+                    Text("拥有音频进程的应用会自动出现在这里")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }
                 .frame(maxWidth: .infinity)
+                .frame(minHeight: 150)
                 .padding(.vertical, 24)
             } else {
                 ScrollView {
@@ -84,7 +85,7 @@ struct MixerView: View {
                     }
                     .padding(.vertical, 2)
                 }
-                .frame(maxHeight: 420)
+                .frame(minHeight: 150, maxHeight: 420)
             }
         }
     }

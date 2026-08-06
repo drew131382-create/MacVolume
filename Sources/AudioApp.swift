@@ -2,7 +2,8 @@ import AppKit
 import CoreAudio
 import Foundation
 
-/// Represents an application that is currently outputting audio
+/// Represents an application with a current Core Audio process object.
+/// The process may be temporarily silent while an app switches tabs or Helpers.
 struct AudioApp: Identifiable, Equatable, Hashable {
     let id: pid_t
     let objectID: AudioObjectID
