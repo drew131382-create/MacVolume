@@ -1,5 +1,6 @@
 import AppKit
 import Combine
+import Darwin
 import SwiftUI
 
 /// AppKit owns the application lifecycle so a hidden SwiftUI scene cannot
@@ -9,6 +10,19 @@ import SwiftUI
 enum MacVolumeApp {
     static func main() {
         AudioProcessEnumerator.runCommandLineModeIfNeeded()
+
+        // A mounted DMG and the installed copy share the same bundle ID.
+        // Reuse the first running instance instead of creating competing
+        // NSStatusItems that can hide one another in the menu bar.
+        let currentProcessIdentifier = ProcessInfo.processInfo.processIdentifier
+        if let bundleIdentifier = Bundle.main.bundleIdentifier,
+           let existing = NSRunningApplication.runningApplications(
+               withBundleIdentifier: bundleIdentifier
+           ).first(where: { $0.processIdentifier != currentProcessIdentifier }) {
+            NSLog("MacVolume: 已有实例运行（PID=%d），当前实例退出", existing.processIdentifier)
+            existing.activate(options: [.activateIgnoringOtherApps])
+            Darwin.exit(0)
+        }
 
         let application = NSApplication.shared
         let delegate = AppDelegate()
