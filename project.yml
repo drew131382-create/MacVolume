@@ -1,11 +1,11 @@
-name: MacVolume
+name: MacVolumeClean
 options:
   createIntermediateGroups: true
   deploymentTarget:
     macOS: "14.2"
 
 targets:
-  MacVolume:
+  MacVolumeClean:
     type: application
     platform: macOS
     sources:
@@ -20,26 +20,17 @@ targets:
     settings:
       base:
         PRODUCT_NAME: MacVolume
-        PRODUCT_BUNDLE_IDENTIFIER: com.ivandrew.macvolume
-        MARKETING_VERSION: "1.0"
+        PRODUCT_BUNDLE_IDENTIFIER: com.ivandrew.macvolume.clean
+        MARKETING_VERSION: "2.0"
         CURRENT_PROJECT_VERSION: "1"
         CODE_SIGN_STYLE: Manual
         CODE_SIGN_IDENTITY: "-"
         ENABLE_HARDENED_RUNTIME: YES
         GENERATE_INFOPLIST_FILE: NO
         COMBINE_HIDPI_IMAGES: YES
-        CODE_SIGN_ENTITLEMENTS: MacVolume.entitlements
+        CODE_SIGN_ENTITLEMENTS: MacVolumeClean.entitlements
         SWIFT_VERSION: "5.9"
         SWIFT_STRICT_CONCURRENCY: minimal
         MACOSX_DEPLOYMENT_TARGET: "14.2"
     info:
       path: Info.plist
-      properties:
-        CFBundleDisplayName: MacVolume
-        CFBundleIconFile: AppIcon
-        NSHumanReadableCopyright: ""
-        NSAudioCaptureUsageDescription: MacVolume 需要读取各应用的音频数据，以便在本地独立调节每个应用的音量。音频只在设备本地实时混音，不会被录制或上传。
-        NSMicrophoneUsageDescription: MacVolume 需要系统音频访问权限来独立控制每个应用的音量。音频不会被录制或上传。
-        LSApplicationCategoryType: public.app-category.utilities
-        LSUIElement: true
-        NSHighResolutionCapable: true

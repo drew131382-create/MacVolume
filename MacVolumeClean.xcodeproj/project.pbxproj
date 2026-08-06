@@ -1,0 +1,262 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		174B827CA49548D10B770366 /* AudioProcessEnumerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D23DAE40FCD0FF1C4630A2EE /* AudioProcessEnumerator.swift */; };
+		1867CD6512E81BB5EEF8BC07 /* AudioObjectID+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D8531C6F7630D4C353EAABB /* AudioObjectID+Extensions.swift */; };
+		1EF4EB540848C4D1D94C4B22 /* CleanMacVolumeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F71072F8D37917C0BA48B0F6 /* CleanMacVolumeApp.swift */; };
+		2A62700708E52A547CA9678B /* DeviceVolume.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFCF7EA7AF81A11431C69F67 /* DeviceVolume.swift */; };
+		31F5E8B2C6054627E259F8FC /* LaunchAtLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6109491C83B78523BBBCE9B3 /* LaunchAtLogin.swift */; };
+		3CBBB612D3A6E26873470CED /* ProcessTapController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E890044486698FA42D75183D /* ProcessTapController.swift */; };
+		42F3D24A00D8C1CCCC43E8CC /* AudioProcessManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCD0BA2B4920C9064BA4812B /* AudioProcessManager.swift */; };
+		44543A01CCEFD9C45E202E41 /* AudioTapManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EA058E57D34584165FADC42 /* AudioTapManager.swift */; };
+		878BCF13DF48CF36628FEFA0 /* MixerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D963941195B9D7982F7DC20 /* MixerView.swift */; };
+		A105AB6E8D890EF04116C67D /* AudioDeviceID+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7310B612CFB76BD55C6A504E /* AudioDeviceID+Extensions.swift */; };
+		CC6E53D69628D2D2A41449D7 /* VolumeState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 953B99A34BCBE9ECBDB69685 /* VolumeState.swift */; };
+		E083FA88202E3C4D46424DE2 /* AudioApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AA45E11800353B93B0E9A7C /* AudioApp.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		2DA0CF67A62310086470F21B /* MacVolumeClean.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MacVolumeClean.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4AA45E11800353B93B0E9A7C /* AudioApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioApp.swift; sourceTree = "<group>"; };
+		4EA058E57D34584165FADC42 /* AudioTapManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTapManager.swift; sourceTree = "<group>"; };
+		6109491C83B78523BBBCE9B3 /* LaunchAtLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLogin.swift; sourceTree = "<group>"; };
+		7310B612CFB76BD55C6A504E /* AudioDeviceID+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AudioDeviceID+Extensions.swift"; sourceTree = "<group>"; };
+		7D8531C6F7630D4C353EAABB /* AudioObjectID+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AudioObjectID+Extensions.swift"; sourceTree = "<group>"; };
+		953B99A34BCBE9ECBDB69685 /* VolumeState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeState.swift; sourceTree = "<group>"; };
+		9D963941195B9D7982F7DC20 /* MixerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MixerView.swift; sourceTree = "<group>"; };
+		BCD0BA2B4920C9064BA4812B /* AudioProcessManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioProcessManager.swift; sourceTree = "<group>"; };
+		D23DAE40FCD0FF1C4630A2EE /* AudioProcessEnumerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioProcessEnumerator.swift; sourceTree = "<group>"; };
+		E890044486698FA42D75183D /* ProcessTapController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessTapController.swift; sourceTree = "<group>"; };
+		F71072F8D37917C0BA48B0F6 /* CleanMacVolumeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanMacVolumeApp.swift; sourceTree = "<group>"; };
+		FFCF7EA7AF81A11431C69F67 /* DeviceVolume.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceVolume.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		05D2E25C379B0F3BD0AE05BC = {
+			isa = PBXGroup;
+			children = (
+				8400B8D0D7CB5EA23C4623D4 /* Sources */,
+				A734416649EB79EC72076548 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		8400B8D0D7CB5EA23C4623D4 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				4AA45E11800353B93B0E9A7C /* AudioApp.swift */,
+				D23DAE40FCD0FF1C4630A2EE /* AudioProcessEnumerator.swift */,
+				BCD0BA2B4920C9064BA4812B /* AudioProcessManager.swift */,
+				4EA058E57D34584165FADC42 /* AudioTapManager.swift */,
+				F71072F8D37917C0BA48B0F6 /* CleanMacVolumeApp.swift */,
+				FFCF7EA7AF81A11431C69F67 /* DeviceVolume.swift */,
+				6109491C83B78523BBBCE9B3 /* LaunchAtLogin.swift */,
+				9D963941195B9D7982F7DC20 /* MixerView.swift */,
+				E890044486698FA42D75183D /* ProcessTapController.swift */,
+				953B99A34BCBE9ECBDB69685 /* VolumeState.swift */,
+				B10B4E1534EB04953C9F6B41 /* Extensions */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		A734416649EB79EC72076548 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				2DA0CF67A62310086470F21B /* MacVolumeClean.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		B10B4E1534EB04953C9F6B41 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				7310B612CFB76BD55C6A504E /* AudioDeviceID+Extensions.swift */,
+				7D8531C6F7630D4C353EAABB /* AudioObjectID+Extensions.swift */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		8198AAD726061C21EFB620FD /* MacVolumeClean */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D3DA0FBE241CD3F1201F2771 /* Build configuration list for PBXNativeTarget "MacVolumeClean" */;
+			buildPhases = (
+				64706B2DB8DCB615CE6769DC /* Sources */,
+				E840E6A8499E0FEE33B3DD3E /* Copy AppIcon */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MacVolumeClean;
+			packageProductDependencies = (
+			);
+			productName = MacVolumeClean;
+			productReference = 2DA0CF67A62310086470F21B /* MacVolumeClean.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		214D17179B0CC5A3B593DE08 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					8198AAD726061C21EFB620FD = {
+						ProvisioningStyle = Manual;
+					};
+				};
+			};
+			buildConfigurationList = 866AC30B3BD6025BE19C72FF /* Build configuration list for PBXProject "MacVolumeClean" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 05D2E25C379B0F3BD0AE05BC;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = A734416649EB79EC72076548 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				8198AAD726061C21EFB620FD /* MacVolumeClean */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		E840E6A8499E0FEE33B3DD3E /* Copy AppIcon */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Copy AppIcon";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "mkdir -p \"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}\"\ncp \"${SRCROOT}/Resources/AppIcon.icns\" \"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/AppIcon.icns\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		64706B2DB8DCB615CE6769DC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E083FA88202E3C4D46424DE2 /* AudioApp.swift in Sources */,
+				A105AB6E8D890EF04116C67D /* AudioDeviceID+Extensions.swift in Sources */,
+				1867CD6512E81BB5EEF8BC07 /* AudioObjectID+Extensions.swift in Sources */,
+				174B827CA49548D10B770366 /* AudioProcessEnumerator.swift in Sources */,
+				42F3D24A00D8C1CCCC43E8CC /* AudioProcessManager.swift in Sources */,
+				44543A01CCEFD9C45E202E41 /* AudioTapManager.swift in Sources */,
+				1EF4EB540848C4D1D94C4B22 /* CleanMacVolumeApp.swift in Sources */,
+				2A62700708E52A547CA9678B /* DeviceVolume.swift in Sources */,
+				31F5E8B2C6054627E259F8FC /* LaunchAtLogin.swift in Sources */,
+				878BCF13DF48CF36628FEFA0 /* MixerView.swift in Sources */,
+				3CBBB612D3A6E26873470CED /* ProcessTapController.swift in Sources */,
+				CC6E53D69628D2D2A41449D7 /* VolumeState.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		05B852FAA61430927FE81D8F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		10B5A4D4A14D42071D99F6C0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		33C8DC633BE55D03BB793297 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = MacVolumeClean.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
+				MARKETING_VERSION = 2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ivandrew.macvolume.clean;
+				PRODUCT_NAME = MacVolume;
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
+		C3ABE21E6FB284AE577A48A3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = MacVolumeClean.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
+				MARKETING_VERSION = 2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ivandrew.macvolume.clean;
+				PRODUCT_NAME = MacVolume;
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		866AC30B3BD6025BE19C72FF /* Build configuration list for PBXProject "MacVolumeClean" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				10B5A4D4A14D42071D99F6C0 /* Debug */,
+				05B852FAA61430927FE81D8F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D3DA0FBE241CD3F1201F2771 /* Build configuration list for PBXNativeTarget "MacVolumeClean" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				33C8DC633BE55D03BB793297 /* Debug */,
+				C3ABE21E6FB284AE577A48A3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 214D17179B0CC5A3B593DE08 /* Project object */;
+}
