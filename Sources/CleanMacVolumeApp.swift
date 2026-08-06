@@ -39,7 +39,7 @@ private final class CleanAppDelegate: NSObject, NSApplicationDelegate {
         let manager = AudioProcessManager()
         self.manager = manager
 
-        let item = NSStatusBar.system.statusItem(withLength: 34)
+        let item = NSStatusBar.system.statusItem(withLength: 24)
         item.autosaveName = "MacVolumeCleanStatusItem"
         item.isVisible = true
         statusItem = item
@@ -49,10 +49,9 @@ private final class CleanAppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        // Text is intentional: it cannot disappear because of SF Symbol
-        // rendering or template-image tinting differences between macOS builds.
-        button.title = "MV"
-        button.image = nil
+        button.title = "🔊"
+        button.imagePosition = .imageOnly
+        button.imageScaling = .scaleProportionallyDown
         button.alignment = .center
         button.font = NSFont.menuBarFont(ofSize: 0)
         button.isBordered = false
@@ -61,6 +60,7 @@ private final class CleanAppDelegate: NSObject, NSApplicationDelegate {
         button.target = self
         button.action = #selector(togglePopover(_:))
         button.sendAction(on: [.leftMouseUp])
+        updateStatusIcon(muted: manager.masterMuted)
 
         let content = MixerView().environmentObject(manager)
         popover.behavior = .transient
@@ -71,11 +71,11 @@ private final class CleanAppDelegate: NSObject, NSApplicationDelegate {
         manager.$masterMuted
             .removeDuplicates()
             .sink { [weak self] muted in
-                self?.updateTitle(muted: muted)
+                self?.updateStatusIcon(muted: muted)
             }
             .store(in: &cancellables)
 
-        NSLog("MacVolume Clean: 菜单栏状态项已创建，标题=MV，长度=34")
+        NSLog("MacVolume Clean: 菜单栏音量图标已创建，长度=24")
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -84,8 +84,22 @@ private final class CleanAppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func updateTitle(muted: Bool) {
-        statusItem?.button?.title = muted ? "M!" : "MV"
+    private func updateStatusIcon(muted: Bool) {
+        guard let button = statusItem?.button else { return }
+
+        let symbolName = muted ? "speaker.slash.fill" : "speaker.wave.2.fill"
+        if let image = NSImage(
+            systemSymbolName: symbolName,
+            accessibilityDescription: muted ? "MacVolume 已静音" : "MacVolume"
+        ) {
+            image.isTemplate = true
+            button.image = image
+            button.title = ""
+        } else {
+            button.image = nil
+            button.title = muted ? "🔇" : "🔊"
+        }
+        button.toolTip = muted ? "MacVolume（已静音）" : "MacVolume"
     }
 
     @objc
