@@ -140,9 +140,11 @@ class AudioTapManager: AudioTapManagerProtocol {
             guard let self = self else { return }
 
             if let existingTap = self.activeTaps[pid] {
+                // Keep an existing unity-gain tap alive. Tearing it down at
+                // exactly 1.0 switches between tapped and direct output and
+                // creates an audible step when the slider crosses 100%.
                 existingTap.volume = volume
                 self.tapStates[pid] = (volume: volume, muted: existingTap.isMuted)
-                self.removeTapIfIdle(for: pid)
             } else {
                 if volume != 1.0 {
                     self.ensureTapExists(for: pid)
@@ -160,7 +162,6 @@ class AudioTapManager: AudioTapManagerProtocol {
             if let existingTap = self.activeTaps[pid] {
                 existingTap.isMuted = muted
                 self.tapStates[pid] = (volume: existingTap.volume, muted: muted)
-                self.removeTapIfIdle(for: pid)
             } else {
                 if muted {
                     self.tapStates[pid] = (volume: 1.0, muted: true)
@@ -188,6 +189,9 @@ class AudioTapManager: AudioTapManagerProtocol {
         queue.async { [weak self] in
             guard let self else { return }
 
+            // Taps are intentionally retained at 1.0 while their process is
+            // still alive so slider changes stay on one continuous audio path.
+            // They are cleaned up here when the process disappears.
             let staleStatePIDs = Set(self.tapStates.keys).subtracting(activePIDs)
             for pid in staleStatePIDs {
                 self.tapStates.removeValue(forKey: pid)
@@ -237,13 +241,6 @@ class AudioTapManager: AudioTapManagerProtocol {
         } catch {
             NSLog("MacVolume: Failed to activate tap for PID \(pid): \(error.localizedDescription)")
         }
-    }
-
-    private func removeTapIfIdle(for pid: pid_t) {
-        guard let tap = activeTaps[pid], tap.volume == 1.0, !tap.isMuted else { return }
-        activeTaps.removeValue(forKey: pid)
-        tapStates.removeValue(forKey: pid)
-        tap.invalidate()
     }
 
     private func isProcessRunning(_ pid: pid_t) -> Bool {
