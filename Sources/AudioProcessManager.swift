@@ -335,7 +335,7 @@ class AudioProcessManager: ObservableObject {
     func setVolume(for app: AudioApp, volume: Float) {
         guard let index = audioApps.firstIndex(where: { $0.id == app.id }) else { return }
 
-        let clamped = max(0, min(2.0, volume))
+        let clamped = max(0, min(3.0, volume))
         audioApps[index].volume = clamped
 
         let identifier = app.bundleIdentifier ?? app.name

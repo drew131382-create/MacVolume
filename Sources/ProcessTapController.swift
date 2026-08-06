@@ -13,7 +13,7 @@ final class ProcessTapController {
 
     // MARK: - RT-Safe State
 
-    /// Target volume set by user (0.0-1.0, where 1.0 = unity gain)
+    /// Target volume set by user (0.0-3.0, where 1.0 = unity gain)
     private nonisolated(unsafe) var _volume: Float = 1.0
     /// Current ramped volume (smoothly approaches _volume)
     private nonisolated(unsafe) var _currentVolume: Float = 1.0
@@ -35,7 +35,7 @@ final class ProcessTapController {
 
     var volume: Float {
         get { _volume }
-        set { _volume = max(0, min(2.0, newValue)) }
+        set { _volume = max(0, min(3.0, newValue)) }
     }
 
     var isMuted: Bool {
