@@ -22,6 +22,10 @@ class AudioProcessManager: ObservableObject {
     private var audioPIDs: Set<pid_t> = []
     private var outputAudioPIDs: Set<pid_t> = []
     private var lastLoggedAudioSignature: String?
+    /// 当前运行期间按稳定应用标识保存的目标增益/静音状态。
+    /// 不按 PID 保存，避免 Helper 切换后回到 100%。
+    private var desiredVolumesByIdentifier: [String: Float] = [:]
+    private var desiredMutesByIdentifier: [String: Bool] = [:]
 
     /// 系统级进程默认隐藏
     private let defaultHiddenApps: Set<String> = [
@@ -163,7 +167,8 @@ class AudioProcessManager: ObservableObject {
             // Helper bundle as an .app itself, which previously bypassed this step.
             var resolvedApp = findResponsibleApp(for: pid, in: runningApps) ?? directApp
 
-            let bundleID = resolvedApp?.bundleIdentifier ?? process.bundleIdentifier ?? objectID.readProcessBundleID()
+            let rawBundleID = resolvedApp?.bundleIdentifier ?? process.bundleIdentifier ?? objectID.readProcessBundleID()
+            let bundleID = Self.stableBundleIdentifier(rawBundleID)
             let localizedName = resolvedApp?.localizedName ?? ""
             var name: String
             if !localizedName.isEmpty {
@@ -241,8 +246,12 @@ class AudioProcessManager: ObservableObject {
 
             let mainPid = (app?.processIdentifier ?? -1) != -1 ? app!.processIdentifier : allPids.first!
 
-            let volume = volumeState.loadSavedVolume(for: mainPid, identifier: groupKey) ?? 1.0
-            let muted = volumeState.loadSavedMute(for: mainPid, identifier: groupKey) ?? false
+            let savedVolume = volumeState.loadSavedVolume(for: mainPid, identifier: groupKey) ?? 1.0
+            let savedMute = volumeState.loadSavedMute(for: mainPid, identifier: groupKey) ?? false
+            let volume = desiredVolumesByIdentifier[groupKey] ?? savedVolume
+            let muted = desiredMutesByIdentifier[groupKey] ?? savedMute
+            desiredVolumesByIdentifier[groupKey] = volume
+            desiredMutesByIdentifier[groupKey] = muted
 
             let additional = allPids.subtracting([mainPid])
 
@@ -322,11 +331,15 @@ class AudioProcessManager: ObservableObject {
         deviceVolume.setMuted(!deviceVolume.isMuted)
     }
 
-    /// 每个 App 的音量是占比（0-1）：最终响度 = 设备音量 × App 占比
+    /// 每个 App 的音量是增益（0-3）：最终响度 = 设备音量 × App 增益
     private func applyEffectiveState(to app: AudioApp) {
+        let identifier = stableStateIdentifier(for: app)
+        let desiredVolume = desiredVolumesByIdentifier[identifier] ?? app.volume
+        let desiredMute = desiredMutesByIdentifier[identifier] ?? app.isMuted
+
         for pid in app.allPids where audioPIDs.contains(pid) {
-            tapManager?.setVolume(for: pid, volume: app.volume)
-            tapManager?.setMute(for: pid, muted: app.isMuted)
+            tapManager?.setVolume(for: pid, volume: desiredVolume)
+            tapManager?.setMute(for: pid, muted: desiredMute)
         }
     }
 
@@ -338,8 +351,10 @@ class AudioProcessManager: ObservableObject {
         let clamped = max(0, min(3.0, volume))
         audioApps[index].volume = clamped
 
-        let identifier = app.bundleIdentifier ?? app.name
+        let identifier = stableStateIdentifier(for: app)
+        desiredVolumesByIdentifier[identifier] = clamped
         volumeState.setVolume(for: app.id, to: clamped, identifier: identifier)
+        NSLog("MacVolume: 保存应用增益 \(identifier)=\(Int(clamped * 100))%%")
 
         applyEffectiveState(to: audioApps[index])
     }
@@ -350,7 +365,8 @@ class AudioProcessManager: ObservableObject {
 
         audioApps[index].volume = 1.0
 
-        let identifier = app.bundleIdentifier ?? app.name
+        let identifier = stableStateIdentifier(for: app)
+        desiredVolumesByIdentifier[identifier] = 1.0
         volumeState.setVolume(for: app.id, to: 1.0, identifier: identifier)
 
         applyEffectiveState(to: audioApps[index])
@@ -362,7 +378,8 @@ class AudioProcessManager: ObservableObject {
         audioApps[index].isMuted.toggle()
         let isMuted = audioApps[index].isMuted
 
-        let identifier = app.bundleIdentifier ?? app.name
+        let identifier = stableStateIdentifier(for: app)
+        desiredMutesByIdentifier[identifier] = isMuted
         volumeState.setMute(for: app.id, to: isMuted, identifier: identifier)
 
         for pid in app.allPids where audioPIDs.contains(pid) {
@@ -416,6 +433,26 @@ class AudioProcessManager: ObservableObject {
             return true
         }
         return false
+    }
+
+    private func stableStateIdentifier(for app: AudioApp) -> String {
+        Self.stableBundleIdentifier(app.bundleIdentifier) ?? app.name
+    }
+
+    /// 将多进程应用的 Helper Bundle ID 归一到主应用 Bundle ID。
+    private static func stableBundleIdentifier(_ bundleID: String?) -> String? {
+        guard let bundleID, !bundleID.isEmpty else { return nil }
+
+        let lowercased = bundleID.lowercased()
+        if lowercased == "com.tencent.flue.wechatappex"
+            || lowercased.hasPrefix("com.tencent.flue.wechatappex.") {
+            return "com.tencent.xinWeChat"
+        }
+        if lowercased == "com.microsoft.edgemac.helper"
+            || lowercased.hasPrefix("com.microsoft.edgemac.helper.") {
+            return "com.microsoft.edgemac"
+        }
+        return bundleID
     }
 
     // MARK: - Private Helper Methods
