@@ -13,10 +13,14 @@ final class ProcessTapController {
 
     // MARK: - RT-Safe State
 
-    /// Target volume set by user (0.0-1.0, where 1.0 = unity gain)
+    /// Target volume set by user (0.0-3.0, where 1.0 = unity gain)
     private nonisolated(unsafe) var _volume: Float = 1.0
     /// Current ramped volume (smoothly approaches _volume)
     private nonisolated(unsafe) var _currentVolume: Float = 1.0
+    /// Transient gain used to undo voice-chat ducking. Kept separate from the
+    /// user volume so call start/end never changes the value shown in the UI.
+    private nonisolated(unsafe) var _duckingCompensationGain: Float = 1.0
+    private nonisolated(unsafe) var _currentDuckingCompensationGain: Float = 1.0
     /// User-controlled mute - outputs silence
     private nonisolated(unsafe) var _isMuted: Bool = false
 
@@ -35,12 +39,17 @@ final class ProcessTapController {
 
     var volume: Float {
         get { _volume }
-        set { _volume = max(0, min(2.0, newValue)) }
+        set { _volume = max(0, min(3.0, newValue)) }
     }
 
     var isMuted: Bool {
         get { _isMuted }
         set { _isMuted = newValue }
+    }
+
+    var duckingCompensationGain: Float {
+        get { _duckingCompensationGain }
+        set { _duckingCompensationGain = max(1.0, min(8.0, newValue)) }
     }
 
     // MARK: - Initialization
@@ -128,6 +137,7 @@ final class ProcessTapController {
         }
 
         _currentVolume = _volume
+        _currentDuckingCompensationGain = _duckingCompensationGain
         activated = true
         logger.info("Tap activated for PID \(self.pid)")
     }
@@ -291,6 +301,8 @@ final class ProcessTapController {
 
         let targetVol = _volume
         var currentVol = _currentVolume
+        let targetCompensation = _duckingCompensationGain
+        var currentCompensation = _currentDuckingCompensationGain
 
         let inputBufferCount = inputBuffers.count
         let outputBufferCount = outputBuffers.count
@@ -325,15 +337,20 @@ final class ProcessTapController {
 
             for i in 0..<count {
                 currentVol += (targetVol - currentVol) * rampCoefficient
+                currentCompensation += (targetCompensation - currentCompensation) * rampCoefficient
                 var sample = inputSamples[i] * currentVol
                 if targetVol > 1.0 {
                     sample = softLimit(sample)
                 }
-                outputSamples[i] = sample
+                // Apply ducking compensation after the user-gain limiter. Values
+                // above ±1 are intentional: WeChat's voice processor attenuates
+                // this signal later in the output path.
+                outputSamples[i] = sample * currentCompensation
             }
         }
 
         _currentVolume = currentVol
+        _currentDuckingCompensationGain = currentCompensation
     }
 
     /// Soft-knee limiter to avoid clipping above unity gain

@@ -19,9 +19,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0</string>
+	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.utilities</string>
 	<key>LSUIElement</key>
@@ -30,8 +30,6 @@
 	<string>MacVolume 需要读取各应用的音频数据，以便在本地独立调节每个应用的音量。音频只在设备本地实时混音，不会被录制或上传。</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
-	<key>NSHumanReadableCopyright</key>
-	<string></string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>MacVolume 需要系统音频访问权限来独立控制每个应用的音量。音频不会被录制或上传。</string>
 </dict>

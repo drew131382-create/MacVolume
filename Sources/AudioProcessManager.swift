@@ -10,15 +10,38 @@ class AudioProcessManager: ObservableObject {
     @Published var audioApps: [AudioApp] = []
     @Published var masterVolume: Float = 1.0
     @Published var masterMuted: Bool = false
+    @Published private(set) var canSetMasterVolume = false
+    @Published private(set) var canSetMasterMute = false
+    @Published private(set) var inputDevices: [AudioDevice] = []
+    @Published private(set) var outputDevices: [AudioDevice] = []
+    @Published private(set) var selectedInputDeviceID: AudioObjectID = .unknown
+    @Published private(set) var selectedOutputDeviceID: AudioObjectID = .unknown
+    @Published private(set) var isWeChatCallProtectionActive = false
 
     private let deviceVolume = DeviceVolume()
     private var tapManager: AudioTapManagerProtocol?
     private var updateTimer: Timer?
     private var cancellables = Set<AnyCancellable>()
     private let volumeState = VolumeState()
-    /// 当前拥有 CoreAudio 进程对象（正在发声）的 PID 集合
+    private var isUpdatingAudioApps = false
+    /// 当前存在 Core Audio 进程对象的 PID 集合。
+    /// 这比瞬时的“正在输出”集合稳定，适合绑定 Edge/微信的动态 Helper。
     private var audioPIDs: Set<pid_t> = []
-    private var didLogInitialApps = false
+    private var outputAudioPIDs: Set<pid_t> = []
+    /// 在微信通话期间保持其他应用不被通话模式压低的进程集合。
+    private var callProtectedPIDs: Set<pid_t> = []
+    /// A dedicated +12 dB call-only compensation. It is applied after the
+    /// normal app gain and never to WeChat itself, so saved mixer settings and
+    /// the call volume remain unchanged.
+    private let weChatDuckingCompensationGain: Float = 4.0
+    /// Avoid audible pumping when Core Audio briefly reports an idle input or
+    /// output stream between call packets.
+    private var weChatCallHoldUntil = Date.distantPast
+    private var lastLoggedAudioSignature: String?
+    /// 当前运行期间按稳定应用标识保存的目标增益/静音状态。
+    /// 不按 PID 保存，避免 Helper 切换后回到 100%。
+    private var desiredVolumesByIdentifier: [String: Float] = [:]
+    private var desiredMutesByIdentifier: [String: Bool] = [:]
 
     /// 系统级进程默认隐藏
     private let defaultHiddenApps: Set<String> = [
@@ -77,6 +100,12 @@ class AudioProcessManager: ObservableObject {
     private func syncMasterFromDevice() {
         masterVolume = deviceVolume.volume
         masterMuted = deviceVolume.isMuted
+        canSetMasterVolume = deviceVolume.canSetVolume
+        canSetMasterMute = deviceVolume.canSetMute
+        inputDevices = deviceVolume.inputDevices
+        outputDevices = deviceVolume.outputDevices
+        selectedInputDeviceID = deviceVolume.selectedInputDeviceID
+        selectedOutputDeviceID = deviceVolume.selectedOutputDeviceID
     }
 
     // MARK: - Monitoring
@@ -111,30 +140,57 @@ class AudioProcessManager: ObservableObject {
             .store(in: &cancellables)
     }
 
-    /// 更新应用列表：仅显示当前正在发声（拥有音频进程对象）的应用
+    /// 更新应用列表：显示当前存在 Core Audio 进程对象的应用。
+    /// 是否正在输出单独记录，不用瞬时状态决定应用是否从列表消失。
     func updateAudioApps() async {
-        let processIDs = await getAudioProcessIDs()
-        let runningApps = NSWorkspace.shared.runningApplications
+        guard !isUpdatingAudioApps else { return }
+        isUpdatingAudioApps = true
+        defer { isUpdatingAudioApps = false }
+
+        // Core Audio 的进程属性查询在 macOS 26 上偶尔会阻塞，不能放在主线程。
         let myPID = ProcessInfo.processInfo.processIdentifier
-
-        var audioObjectByPID: [pid_t: AudioObjectID] = [:]
-
-        for objectID in processIDs {
-            guard objectID.readProcessIsRunning() else { continue }
-            guard let pid = try? objectID.readProcessPID(), pid != myPID else { continue }
-            audioObjectByPID[pid] = objectID
+        let queryResult = await Task.detached(priority: .userInitiated) {
+            Self.getAudioProcessesUsingHelper(excluding: myPID)
+        }.value
+        guard let activeProcesses = queryResult else {
+            // Core Audio 查询失败或超时时保留现有列表，不要误清空界面。
+            return
         }
-        audioPIDs = Set(audioObjectByPID.keys)
+        let runningApps = NSWorkspace.shared.runningApplications
 
-        // 把发声的 PID 映射到其宿主主应用，并做 Helper 合并
-        var appGroups: [String: (app: NSRunningApplication?, objectID: AudioObjectID, pids: Set<pid_t>)] = [:]
+        var processByPID: [pid_t: AudioProcessRecord] = [:]
 
-        for (pid, objectID) in audioObjectByPID {
+        for process in activeProcesses {
+            processByPID[process.pid] = process
+        }
+        let currentAudioPIDs = Set(processByPID.keys)
+        let newAudioPIDs = currentAudioPIDs.subtracting(audioPIDs)
+        let removedAudioPIDs = audioPIDs.subtracting(currentAudioPIDs)
+        audioPIDs = currentAudioPIDs
+        outputAudioPIDs = Set(activeProcesses.filter(\.isOutputting).map(\.pid))
+
+        let processSignature = activeProcesses
+            .sorted { $0.pid < $1.pid }
+            .map { "\($0.pid):\($0.objectID):\($0.isOutputting ? 1 : 0)" }
+            .joined(separator: ";")
+        let snapshotChanged = processSignature != lastLoggedAudioSignature
+        if snapshotChanged {
+            NSLog("MacVolume: Core Audio 进程快照 \(activeProcesses.count) 个，正在输出 \(outputAudioPIDs.count) 个，新加入 \(newAudioPIDs.count) 个，移除 \(removedAudioPIDs.count) 个")
+            lastLoggedAudioSignature = processSignature
+        }
+
+        // 把 Core Audio PID 映射到其宿主主应用，并做 Helper 合并。
+        var appGroups: [String: (app: NSRunningApplication?, objectID: AudioObjectID, pids: Set<pid_t>, outputPIDs: Set<pid_t>, inputPIDs: Set<pid_t>)] = [:]
+
+        for (pid, process) in processByPID {
+            let objectID = process.objectID
             let directApp = runningApps.first { $0.processIdentifier == pid }
-            let isRealApp = directApp?.bundleURL?.pathExtension == "app"
-            var resolvedApp = isRealApp ? directApp : findResponsibleApp(for: pid, in: runningApps)
+            // Always try parent resolution. NSRunningApplication may expose a
+            // Helper bundle as an .app itself, which previously bypassed this step.
+            var resolvedApp = findResponsibleApp(for: pid, in: runningApps) ?? directApp
 
-            let bundleID = resolvedApp?.bundleIdentifier ?? objectID.readProcessBundleID()
+            let rawBundleID = resolvedApp?.bundleIdentifier ?? process.bundleIdentifier ?? objectID.readProcessBundleID()
+            let bundleID = Self.stableBundleIdentifier(rawBundleID)
             let localizedName = resolvedApp?.localizedName ?? ""
             var name: String
             if !localizedName.isEmpty {
@@ -189,9 +245,21 @@ class AudioProcessManager: ObservableObject {
 
             if var existing = appGroups[groupKey] {
                 existing.pids.insert(pid)
-                appGroups[groupKey] = (existing.app ?? resolvedApp, existing.objectID, existing.pids)
+                if process.isOutputting {
+                    existing.outputPIDs.insert(pid)
+                }
+                if process.isInputting {
+                    existing.inputPIDs.insert(pid)
+                }
+                appGroups[groupKey] = (existing.app ?? resolvedApp, existing.objectID, existing.pids, existing.outputPIDs, existing.inputPIDs)
             } else {
-                appGroups[groupKey] = (resolvedApp, objectID, [pid])
+                appGroups[groupKey] = (
+                    resolvedApp,
+                    objectID,
+                    [pid],
+                    process.isOutputting ? [pid] : [],
+                    process.isInputting ? [pid] : []
+                )
             }
         }
 
@@ -204,8 +272,12 @@ class AudioProcessManager: ObservableObject {
 
             let mainPid = (app?.processIdentifier ?? -1) != -1 ? app!.processIdentifier : allPids.first!
 
-            let volume = volumeState.loadSavedVolume(for: mainPid, identifier: groupKey) ?? 1.0
-            let muted = volumeState.loadSavedMute(for: mainPid, identifier: groupKey) ?? false
+            let savedVolume = volumeState.loadSavedVolume(for: mainPid, identifier: groupKey) ?? 1.0
+            let savedMute = volumeState.loadSavedMute(for: mainPid, identifier: groupKey) ?? false
+            let volume = desiredVolumesByIdentifier[groupKey] ?? savedVolume
+            let muted = desiredMutesByIdentifier[groupKey] ?? savedMute
+            desiredVolumesByIdentifier[groupKey] = volume
+            desiredMutesByIdentifier[groupKey] = muted
 
             let additional = allPids.subtracting([mainPid])
 
@@ -213,7 +285,7 @@ class AudioProcessManager: ObservableObject {
             if let ln = app?.localizedName, !ln.isEmpty {
                 finalName = ln
             } else {
-                let bundleFallback = mainObjectID.readProcessBundleID()?.components(separatedBy: ".").last ?? ""
+                let bundleFallback = groupKey.components(separatedBy: ".").last ?? ""
                 finalName = bundleFallback.isEmpty ? (processName(for: mainPid) ?? "Unknown App") : bundleFallback
             }
             let finalIcon = app?.icon ?? NSImage(systemSymbolName: "app.fill", accessibilityDescription: nil)
@@ -224,6 +296,7 @@ class AudioProcessManager: ObservableObject {
                 name: finalName,
                 bundleIdentifier: groupKey,
                 icon: finalIcon,
+                isOutputting: !group.outputPIDs.isEmpty,
                 volume: volume,
                 isMuted: muted,
                 additionalPids: additional
@@ -232,18 +305,66 @@ class AudioProcessManager: ObservableObject {
             newApps.append(audioApp)
         }
 
-        newApps.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        newApps.sort(by: Self.appSort)
 
-        if !didLogInitialApps {
-            let visible = newApps.filter { !isAppHidden($0) }
-            NSLog("MacVolume: 显示 \(visible.count)/\(newApps.count) 个应用: \(visible.map(\.name).joined(separator: ", "))")
-            didLogInitialApps = true
+        if snapshotChanged {
+            let groupDescriptions = appGroups
+                .map { key, group in
+                    let name = group.app?.localizedName ?? key
+                    let pids = group.pids.sorted().map(String.init).joined(separator: ",")
+                    let outputPIDs = group.outputPIDs.sorted().map(String.init).joined(separator: ",")
+                    let inputPIDs = group.inputPIDs.sorted().map(String.init).joined(separator: ",")
+                    return "\(name)[\(pids)] 输出=[\(outputPIDs)] 输入=[\(inputPIDs)]"
+                }
+                .sorted()
+                .joined(separator: "; ")
+            NSLog("MacVolume: 应用归并结果 \(newApps.count) 个: \(groupDescriptions)")
         }
 
         let activePIDs = Set(newApps.flatMap(\.allPids))
         tapManager?.removeUnusedTaps(keeping: activePIDs)
 
         self.audioApps = newApps
+
+        // 微信通话通常由同一应用组下不同 Helper 分别负责输入和输出。只要该
+        // 应用组同时存在输入、输出就视为通话；短暂丢失状态时保持几秒，防止
+        // 补偿增益在通话中反复开关。
+        let weChatGroups = appGroups.filter { groupKey, group in
+            isWeChatIdentifier(groupKey)
+                || isWeChatIdentifier(group.app?.bundleIdentifier ?? "")
+                || isWeChatIdentifier(group.app?.localizedName ?? "")
+        }
+        let weChatOutputPIDs = Set(weChatGroups.flatMap { $0.value.outputPIDs })
+        let weChatInputPIDs = Set(weChatGroups.flatMap { $0.value.inputPIDs })
+        let weChatCallObserved = !weChatOutputPIDs.isEmpty && !weChatInputPIDs.isEmpty
+        if weChatCallObserved {
+            weChatCallHoldUntil = Date().addingTimeInterval(6.0)
+        }
+        let weChatCallActive = weChatCallObserved || Date() < weChatCallHoldUntil
+        let nextProtectedPIDs: Set<pid_t>
+        if weChatCallActive {
+            nextProtectedPIDs = Set(appGroups
+                .filter { groupKey, group in
+                    !isWeChatIdentifier(groupKey)
+                        && !isWeChatIdentifier(group.app?.bundleIdentifier ?? "")
+                        && !isWeChatIdentifier(group.app?.localizedName ?? "")
+                }
+                .flatMap { $0.value.outputPIDs })
+        } else {
+            nextProtectedPIDs = []
+        }
+
+        for pid in callProtectedPIDs.subtracting(nextProtectedPIDs) {
+            tapManager?.setDuckingCompensation(for: pid, gain: 1.0)
+        }
+        for pid in nextProtectedPIDs {
+            tapManager?.setDuckingCompensation(for: pid, gain: weChatDuckingCompensationGain)
+        }
+        if weChatCallActive != isWeChatCallProtectionActive {
+            NSLog("MacVolume: 微信通话保护 \(weChatCallActive ? "开启" : "关闭")，补偿=\(weChatDuckingCompensationGain)x，保护进程数=\(nextProtectedPIDs.count)")
+        }
+        isWeChatCallProtectionActive = weChatCallActive
+        callProtectedPIDs = nextProtectedPIDs
 
         for app in newApps {
             applyEffectiveState(to: app)
@@ -277,11 +398,27 @@ class AudioProcessManager: ObservableObject {
         deviceVolume.setMuted(!deviceVolume.isMuted)
     }
 
-    /// 每个 App 的音量是占比（0-1）：最终响度 = 设备音量 × App 占比
+    func selectInputDevice(_ id: AudioObjectID) {
+        if !deviceVolume.selectInputDevice(id) {
+            syncMasterFromDevice()
+        }
+    }
+
+    func selectOutputDevice(_ id: AudioObjectID) {
+        if !deviceVolume.selectOutputDevice(id) {
+            syncMasterFromDevice()
+        }
+    }
+
+    /// 每个 App 的音量是增益（0-3）：最终响度 = 设备音量 × App 增益
     private func applyEffectiveState(to app: AudioApp) {
+        let identifier = stableStateIdentifier(for: app)
+        let desiredVolume = desiredVolumesByIdentifier[identifier] ?? app.volume
+        let desiredMute = desiredMutesByIdentifier[identifier] ?? app.isMuted
+
         for pid in app.allPids where audioPIDs.contains(pid) {
-            tapManager?.setVolume(for: pid, volume: app.volume)
-            tapManager?.setMute(for: pid, muted: app.isMuted)
+            tapManager?.setVolume(for: pid, volume: desiredVolume)
+            tapManager?.setMute(for: pid, muted: desiredMute)
         }
     }
 
@@ -290,11 +427,13 @@ class AudioProcessManager: ObservableObject {
     func setVolume(for app: AudioApp, volume: Float) {
         guard let index = audioApps.firstIndex(where: { $0.id == app.id }) else { return }
 
-        let clamped = max(0, min(2.0, volume))
+        let clamped = max(0, min(3.0, volume))
         audioApps[index].volume = clamped
 
-        let identifier = app.bundleIdentifier ?? app.name
+        let identifier = stableStateIdentifier(for: app)
+        desiredVolumesByIdentifier[identifier] = clamped
         volumeState.setVolume(for: app.id, to: clamped, identifier: identifier)
+        NSLog("MacVolume: 保存应用增益 \(identifier)=\(Int(clamped * 100))%%")
 
         applyEffectiveState(to: audioApps[index])
     }
@@ -305,7 +444,8 @@ class AudioProcessManager: ObservableObject {
 
         audioApps[index].volume = 1.0
 
-        let identifier = app.bundleIdentifier ?? app.name
+        let identifier = stableStateIdentifier(for: app)
+        desiredVolumesByIdentifier[identifier] = 1.0
         volumeState.setVolume(for: app.id, to: 1.0, identifier: identifier)
 
         applyEffectiveState(to: audioApps[index])
@@ -317,7 +457,8 @@ class AudioProcessManager: ObservableObject {
         audioApps[index].isMuted.toggle()
         let isMuted = audioApps[index].isMuted
 
-        let identifier = app.bundleIdentifier ?? app.name
+        let identifier = stableStateIdentifier(for: app)
+        desiredMutesByIdentifier[identifier] = isMuted
         volumeState.setMute(for: app.id, to: isMuted, identifier: identifier)
 
         for pid in app.allPids where audioPIDs.contains(pid) {
@@ -333,7 +474,30 @@ class AudioProcessManager: ObservableObject {
     // MARK: - Visibility
 
     var visibleApps: [AudioApp] {
-        audioApps.filter { !isAppHidden($0) }
+        audioApps
+            .filter { !isAppHidden($0) }
+            .sorted(by: Self.appSort)
+    }
+
+    /// 正在输出的应用置顶；同一状态下按名称、Bundle ID、主 PID 稳定排序。
+    private static func appSort(_ lhs: AudioApp, _ rhs: AudioApp) -> Bool {
+        if lhs.isOutputting != rhs.isOutputting {
+            return lhs.isOutputting && !rhs.isOutputting
+        }
+
+        let nameOrder = lhs.name.localizedCaseInsensitiveCompare(rhs.name)
+        if nameOrder != .orderedSame {
+            return nameOrder == .orderedAscending
+        }
+
+        let lhsBundle = lhs.bundleIdentifier ?? ""
+        let rhsBundle = rhs.bundleIdentifier ?? ""
+        let bundleOrder = lhsBundle.localizedCaseInsensitiveCompare(rhsBundle)
+        if bundleOrder != .orderedSame {
+            return bundleOrder == .orderedAscending
+        }
+
+        return lhs.id < rhs.id
     }
 
     private func isAppHidden(_ app: AudioApp) -> Bool {
@@ -350,41 +514,104 @@ class AudioProcessManager: ObservableObject {
         return false
     }
 
+    private func isWeChatIdentifier(_ identifier: String) -> Bool {
+        let normalized = identifier.lowercased()
+        return normalized == "com.tencent.xinwechat"
+            || normalized == "com.tencent.flue.wechatappex"
+            || normalized.contains("wechat")
+            || identifier.contains("微信")
+    }
+
+    private func stableStateIdentifier(for app: AudioApp) -> String {
+        Self.stableBundleIdentifier(app.bundleIdentifier) ?? app.name
+    }
+
+    /// 将多进程应用的 Helper Bundle ID 归一到主应用 Bundle ID。
+    private static func stableBundleIdentifier(_ bundleID: String?) -> String? {
+        guard let bundleID, !bundleID.isEmpty else { return nil }
+
+        let lowercased = bundleID.lowercased()
+        if lowercased == "com.tencent.flue.wechatappex"
+            || lowercased.hasPrefix("com.tencent.flue.wechatappex.") {
+            return "com.tencent.xinWeChat"
+        }
+        if lowercased == "com.microsoft.edgemac.helper"
+            || lowercased.hasPrefix("com.microsoft.edgemac.helper.") {
+            return "com.microsoft.edgemac"
+        }
+        return bundleID
+    }
+
     // MARK: - Private Helper Methods
 
-    private func getAudioProcessIDs() async -> [AudioObjectID] {
-        var propertyAddress = AudioObjectPropertyAddress(
-            mSelector: kAudioHardwarePropertyProcessObjectList,
-            mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain
-        )
+    private nonisolated static func getAudioProcessesUsingHelper(excluding excludedPID: pid_t) -> [AudioProcessRecord]? {
+        guard let executableURL = Bundle.main.executableURL else {
+            NSLog("MacVolume: 无法找到自身可执行文件，不能枚举 Core Audio 进程")
+            return nil
+        }
 
-        var propertySize: UInt32 = 0
-        let status = AudioObjectGetPropertyDataSize(
-            AudioObjectID(kAudioObjectSystemObject),
-            &propertyAddress,
-            0,
-            nil,
-            &propertySize
-        )
+        let process = Process()
+        let output = Pipe()
+        process.executableURL = executableURL
+        process.arguments = ["--enumerate-audio", "--exclude", String(excludedPID)]
+        process.standardOutput = output
+        process.standardError = FileHandle.nullDevice
 
-        guard status == noErr else { return [] }
+        do {
+            try process.run()
+        } catch {
+            NSLog("MacVolume: 启动 Core Audio 枚举 Helper 失败: \(error.localizedDescription)")
+            return nil
+        }
 
-        let count = Int(propertySize) / MemoryLayout<AudioObjectID>.size
-        var objectList = [AudioObjectID](repeating: 0, count: count)
+        let deadline = Date().addingTimeInterval(3.0)
+        while process.isRunning && Date() < deadline {
+            Thread.sleep(forTimeInterval: 0.02)
+        }
 
-        let dataStatus = AudioObjectGetPropertyData(
-            AudioObjectID(kAudioObjectSystemObject),
-            &propertyAddress,
-            0,
-            nil,
-            &propertySize,
-            &objectList
-        )
+        guard !process.isRunning else {
+            kill(process.processIdentifier, SIGKILL)
+            process.waitUntilExit()
+            NSLog("MacVolume: Core Audio 枚举 Helper 超时，已终止子进程")
+            return nil
+        }
 
-        guard dataStatus == noErr else { return [] }
+        let data = output.fileHandleForReading.readDataToEndOfFile()
+        guard process.terminationStatus == 0 else {
+            NSLog("MacVolume: Core Audio 枚举 Helper 退出异常，状态码=\(process.terminationStatus)")
+            return nil
+        }
+        guard let text = String(data: data, encoding: .utf8) else {
+            NSLog("MacVolume: Core Audio 枚举 Helper 输出不是 UTF-8")
+            return nil
+        }
 
-        return objectList
+        var invalidLineCount = 0
+        let records = text.split(separator: "\n").compactMap { line -> AudioProcessRecord? in
+            let fields = line.split(separator: ",", omittingEmptySubsequences: false)
+            guard fields.count >= 3,
+                  let pid = pid_t(fields[0]),
+                  let objectID = AudioObjectID(fields[1]),
+                  let outputFlag = Int(fields[2]) else {
+                invalidLineCount += 1
+                return nil
+            }
+            let inputFlag = fields.count >= 4 ? Int(fields[3]) ?? 0 : 0
+            let bundleIdentifier = fields.count >= 5 && !fields[4].isEmpty
+                ? String(fields[4])
+                : nil
+            return AudioProcessRecord(
+                pid: pid,
+                objectID: objectID,
+                bundleIdentifier: bundleIdentifier,
+                isOutputting: outputFlag != 0,
+                isInputting: inputFlag != 0
+            )
+        }
+        if invalidLineCount > 0 {
+            NSLog("MacVolume: Core Audio 枚举 Helper 丢弃 \(invalidLineCount) 条格式错误记录")
+        }
+        return records
     }
 
     /// 判断一个应用是否为 Helper 子进程，并找到其宿主主应用
@@ -392,7 +619,24 @@ class AudioProcessManager: ObservableObject {
         let name = app.localizedName ?? ""
         let bundleID = app.bundleIdentifier ?? ""
 
-        // 0. bundleID 前缀包含：子 bundle 归入父应用（如 com.tencent.xinWeChat.WeChatAppEx → com.tencent.xinWeChat）
+        // 0. Bundle 路径包含关系：嵌套在主 App 包内的 Helper 归入最近的宿主。
+        // 这覆盖 Edge Helper，也覆盖微信的 com.tencent.flue.WeChatAppEx
+        // 这类 bundle ID 不共享前缀的辅助进程。
+        if let appURL = app.bundleURL {
+            let appPath = appURL.standardizedFileURL.path
+            let pathCandidates = runningApps.compactMap { other -> (NSRunningApplication, Int)? in
+                guard other.processIdentifier != app.processIdentifier,
+                      let otherURL = other.bundleURL else { return nil }
+                let otherPath = otherURL.standardizedFileURL.path
+                guard appPath.hasPrefix(otherPath + "/") else { return nil }
+                return (other, otherPath.count)
+            }
+            if let nearest = pathCandidates.max(by: { $0.1 < $1.1 })?.0 {
+                return nearest
+            }
+        }
+
+        // 1. bundleID 前缀包含：子 bundle 归入父应用（如 com.tencent.xinWeChat.WeChatAppEx → com.tencent.xinWeChat）
         if !bundleID.isEmpty {
             for other in runningApps where other.processIdentifier != app.processIdentifier {
                 if let otherBundle = other.bundleIdentifier, !otherBundle.isEmpty, bundleID.hasPrefix(otherBundle + ".") {
@@ -413,7 +657,7 @@ class AudioProcessManager: ObservableObject {
             || lowerBundle.contains(".networking")
         guard isHelper else { return nil }
 
-        // 1. 从 bundleID 逐段去掉后缀匹配宿主（com.xxx.YY.Helper → com.xxx.YY）
+        // 2. 从 bundleID 逐段去掉后缀匹配宿主（com.xxx.YY.Helper → com.xxx.YY）
         if !bundleID.isEmpty {
             var parts = bundleID.components(separatedBy: ".")
             while parts.count > 1 {
@@ -425,7 +669,7 @@ class AudioProcessManager: ObservableObject {
             }
         }
 
-        // 2. 按名称前缀匹配宿主（如 "哔哩哔哩 Helper" → "哔哩哔哩"）
+        // 3. 按名称前缀匹配宿主（如 "哔哩哔哩 Helper" → "哔哩哔哩"）
         for other in runningApps where other.processIdentifier != app.processIdentifier {
             let otherName = other.localizedName ?? ""
             if !otherName.isEmpty, name.hasPrefix(otherName) { return other }
@@ -433,7 +677,7 @@ class AudioProcessManager: ObservableObject {
             if !otherBundle.isEmpty, bundleID.hasPrefix(otherBundle) { return other }
         }
 
-        // 3. WebKit 相关进程 → Safari
+        // 4. WebKit 相关进程 → Safari
         if bundleID.hasPrefix("com.apple.WebKit") {
             return runningApps.first { $0.bundleIdentifier == "com.apple.Safari" }
         }

@@ -6,6 +6,7 @@ import Foundation
 protocol AudioTapManagerProtocol {
     func setVolume(for pid: pid_t, volume: Float)
     func setMute(for pid: pid_t, muted: Bool)
+    func setDuckingCompensation(for pid: pid_t, gain: Float)
     func removeTap(for pid: pid_t)
     func removeUnusedTaps(keeping activePIDs: Set<pid_t>)
     func resetAudio()
@@ -28,6 +29,9 @@ class AudioTapManager: AudioTapManagerProtocol {
 
     private var activeTaps: [pid_t: ProcessTapController] = [:]
     private var tapStates: [pid_t: (volume: Float, muted: Bool)] = [:]
+    /// Extra gain used only to counter voice-chat ducking. This is deliberately
+    /// separate from tapStates so it never changes the user's saved app volume.
+    private var duckingCompensationByPID: [pid_t: Float] = [:]
     private let queue = DispatchQueue(label: "com.macvolume.audiotap", qos: .userInteractive)
 
     private var deviceChangeListenerBlock: AudioObjectPropertyListenerBlock?
@@ -119,6 +123,7 @@ class AudioTapManager: AudioTapManagerProtocol {
                 tap.volume = state.volume
                 tap.isMuted = state.muted
             }
+            tap.duckingCompensationGain = self.duckingCompensationByPID[pid] ?? 1.0
 
             self.activeTaps[pid] = tap
         } catch {
@@ -153,6 +158,26 @@ class AudioTapManager: AudioTapManagerProtocol {
         }
     }
 
+    /// Applies a transient post-limiter gain to counter the attenuation caused
+    /// by another app's voice-processing unit. The user-selected volume remains
+    /// independent and is restored unchanged when the call ends.
+    func setDuckingCompensation(for pid: pid_t, gain: Float) {
+        queue.async { [weak self] in
+            guard let self else { return }
+
+            let clampedGain = max(1.0, min(8.0, gain))
+            if clampedGain > 1.0 {
+                self.duckingCompensationByPID[pid] = clampedGain
+                self.ensureTapExists(for: pid)
+                self.activeTaps[pid]?.duckingCompensationGain = clampedGain
+            } else {
+                self.duckingCompensationByPID.removeValue(forKey: pid)
+                self.activeTaps[pid]?.duckingCompensationGain = 1.0
+                self.removeTapIfIdle(for: pid)
+            }
+        }
+    }
+
     func setMute(for pid: pid_t, muted: Bool) {
         queue.async { [weak self] in
             guard let self = self else { return }
@@ -177,6 +202,7 @@ class AudioTapManager: AudioTapManagerProtocol {
 
     func removeTap(for pid: pid_t) {
         queue.async { [weak self] in
+            self?.duckingCompensationByPID.removeValue(forKey: pid)
             if let tap = self?.activeTaps.removeValue(forKey: pid) {
                 tap.invalidate()
             }
@@ -188,6 +214,9 @@ class AudioTapManager: AudioTapManagerProtocol {
         queue.async { [weak self] in
             guard let self else { return }
 
+            self.duckingCompensationByPID = self.duckingCompensationByPID.filter {
+                activePIDs.contains($0.key)
+            }
             let staleStatePIDs = Set(self.tapStates.keys).subtracting(activePIDs)
             for pid in staleStatePIDs {
                 self.tapStates.removeValue(forKey: pid)
@@ -221,6 +250,14 @@ class AudioTapManager: AudioTapManagerProtocol {
         }
     }
 
+    private func removeTapIfIdle(for pid: pid_t) {
+        guard duckingCompensationByPID[pid] == nil else { return }
+        guard let tap = activeTaps[pid], tap.volume == 1.0, !tap.isMuted else { return }
+        activeTaps.removeValue(forKey: pid)
+        tapStates.removeValue(forKey: pid)
+        tap.invalidate()
+    }
+
     // MARK: - Private Implementation
 
     private func ensureTapExists(for pid: pid_t) {
@@ -233,17 +270,11 @@ class AudioTapManager: AudioTapManagerProtocol {
 
         do {
             try tap.activate()
+            tap.duckingCompensationGain = duckingCompensationByPID[pid] ?? 1.0
             activeTaps[pid] = tap
         } catch {
             NSLog("MacVolume: Failed to activate tap for PID \(pid): \(error.localizedDescription)")
         }
-    }
-
-    private func removeTapIfIdle(for pid: pid_t) {
-        guard let tap = activeTaps[pid], tap.volume == 1.0, !tap.isMuted else { return }
-        activeTaps.removeValue(forKey: pid)
-        tapStates.removeValue(forKey: pid)
-        tap.invalidate()
     }
 
     private func isProcessRunning(_ pid: pid_t) -> Bool {
@@ -259,6 +290,9 @@ class AudioTapManagerFallback: AudioTapManagerProtocol {
     }
     func setMute(for pid: pid_t, muted: Bool) {
         NSLog("MacVolume: Mute control not available on this macOS version")
+    }
+    func setDuckingCompensation(for pid: pid_t, gain: Float) {
+        NSLog("MacVolume: Ducking compensation not available on this macOS version")
     }
     func removeTap(for pid: pid_t) {}
     func removeUnusedTaps(keeping activePIDs: Set<pid_t>) {}
