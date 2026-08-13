@@ -1,9 +1,5 @@
-# macOS
 .DS_Store
-
-# Xcode / build output
-build/
+build_*/
+dist/
 DerivedData/
-xcuserdata/
-*.xccheckout
 *.xcuserstate

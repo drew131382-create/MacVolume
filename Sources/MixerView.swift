@@ -1,4 +1,6 @@
 import AppKit
+import AVKit
+import CoreAudio
 import SwiftUI
 
 struct MixerView: View {
@@ -14,16 +16,44 @@ struct MixerView: View {
             footer
         }
         .padding(12)
-        .frame(width: 320)
+        .frame(width: 340)
     }
 
-    // MARK: - Master
+    // MARK: - Audio Devices
 
     private var masterSection: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 8) {
             HStack {
-                Label("主音量", systemImage: "speaker.wave.3.fill")
+                Label("音频设备", systemImage: "hifispeaker.2.fill")
                     .font(.headline)
+                Spacer()
+
+                Text("隔空播放")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                AirPlayRoutePicker()
+                    .frame(width: 28, height: 24)
+                    .help("选择隔空播放设备")
+            }
+
+            devicePickerRow(
+                title: "输入",
+                icon: "mic.fill",
+                devices: manager.inputDevices,
+                selection: inputDeviceBinding
+            )
+
+            devicePickerRow(
+                title: "输出",
+                icon: "speaker.wave.2.fill",
+                devices: manager.outputDevices,
+                selection: outputDeviceBinding
+            )
+
+            HStack {
+                Text("输出设备音量")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 Spacer()
                 Button {
                     manager.toggleMasterMute()
@@ -32,14 +62,51 @@ struct MixerView: View {
                         .foregroundStyle(manager.masterMuted ? .red : .secondary)
                 }
                 .buttonStyle(.plain)
-                .help(manager.masterMuted ? "取消静音" : "全部静音")
+                .disabled(!manager.canSetMasterMute)
+                .help(manager.canSetMasterMute ? (manager.masterMuted ? "取消输出设备静音" : "将输出设备静音") : "此设备不支持软件静音")
             }
+
             HStack {
                 Slider(value: masterVolumeBinding, in: 0...1.0)
-                Text("\(Int(manager.masterVolume * 100))%")
+                    .disabled(!manager.canSetMasterVolume)
+                Text(manager.canSetMasterVolume ? "\(Int(manager.masterVolume * 100))%" : "由设备控制")
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
-                    .frame(width: 44, alignment: .trailing)
+                    .frame(width: 66, alignment: .trailing)
+            }
+        }
+    }
+
+    private func devicePickerRow(
+        title: String,
+        icon: String,
+        devices: [AudioDevice],
+        selection: Binding<AudioObjectID>
+    ) -> some View {
+        HStack(spacing: 8) {
+            Label(title, systemImage: icon)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(width: 48, alignment: .leading)
+
+            if devices.isEmpty {
+                Text("未找到设备")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                Picker(title, selection: selection) {
+                    if !devices.contains(where: { $0.id == selection.wrappedValue }) {
+                        Text("未选择").tag(AudioObjectID.unknown)
+                    }
+                    ForEach(devices) { device in
+                        Label(device.name, systemImage: device.iconName)
+                            .tag(device.id)
+                    }
+                }
+                .labelsHidden()
+                .controlSize(.small)
+                .frame(maxWidth: .infinity)
             }
         }
     }
@@ -48,6 +115,20 @@ struct MixerView: View {
         Binding(
             get: { manager.masterVolume },
             set: { manager.setMasterVolume($0) }
+        )
+    }
+
+    private var inputDeviceBinding: Binding<AudioObjectID> {
+        Binding(
+            get: { manager.selectedInputDeviceID },
+            set: { manager.selectInputDevice($0) }
+        )
+    }
+
+    private var outputDeviceBinding: Binding<AudioObjectID> {
+        Binding(
+            get: { manager.selectedOutputDeviceID },
+            set: { manager.selectOutputDevice($0) }
         )
     }
 
@@ -63,11 +144,12 @@ struct MixerView: View {
                     Text("暂无可调节的应用")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                    Text("播放声音的应用会自动出现在这里")
+                    Text("拥有音频进程的应用会自动出现在这里")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }
                 .frame(maxWidth: .infinity)
+                .frame(minHeight: 150)
                 .padding(.vertical, 24)
             } else {
                 ScrollView {
@@ -84,7 +166,7 @@ struct MixerView: View {
                     }
                     .padding(.vertical, 2)
                 }
-                .frame(maxHeight: 420)
+                .frame(minHeight: 150, maxHeight: 360)
             }
         }
     }
@@ -92,29 +174,55 @@ struct MixerView: View {
     // MARK: - Footer
 
     private var footer: some View {
-        HStack {
-            Toggle(isOn: $launchAtLogin) {
-                Text("开机自启动")
+        VStack(spacing: 7) {
+            if manager.isWeChatCallProtectionActive {
+                Label("微信通话中：其他应用音量保护已开启", systemImage: "phone.badge.waveform.fill")
                     .font(.caption)
+                    .foregroundStyle(.green)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .toggleStyle(.switch)
-            .controlSize(.small)
-            .onChange(of: launchAtLogin) { _, newValue in
-                do {
-                    try LaunchAtLogin.setEnabled(newValue)
-                } catch {
-                    launchAtLogin = LaunchAtLogin.isEnabled
+
+            HStack {
+                Toggle(isOn: $launchAtLogin) {
+                    Text("开机自启动")
+                        .font(.caption)
                 }
-            }
+                .toggleStyle(.switch)
+                .controlSize(.small)
+                .onChange(of: launchAtLogin) { _, newValue in
+                    do {
+                        try LaunchAtLogin.setEnabled(newValue)
+                    } catch {
+                        launchAtLogin = LaunchAtLogin.isEnabled
+                    }
+                }
 
-            Spacer()
+                Spacer()
 
-            Button("退出") {
-                NSApp.terminate(nil)
+                Button("退出") {
+                    NSApp.terminate(nil)
+                }
+                .font(.caption)
             }
-            .font(.caption)
         }
     }
+}
+
+// MARK: - AirPlay
+
+/// Apple's system route picker. It presents nearby AirPlay receivers and keeps
+/// the route UI consistent with the rest of macOS.
+struct AirPlayRoutePicker: NSViewRepresentable {
+    func makeNSView(context: Context) -> AVRoutePickerView {
+        let picker = AVRoutePickerView(frame: .zero)
+        picker.isRoutePickerButtonBordered = true
+        picker.setRoutePickerButtonColor(.labelColor, for: .normal)
+        picker.setRoutePickerButtonColor(.controlAccentColor, for: .active)
+        picker.setAccessibilityLabel("隔空播放")
+        return picker
+    }
+
+    func updateNSView(_ nsView: AVRoutePickerView, context: Context) {}
 }
 
 // MARK: - App Row
@@ -157,7 +265,7 @@ struct AppRow: View {
                 HStack(spacing: 6) {
                     ResetSlider(
                         value: volumeBinding,
-                        range: 0...2.0,
+                        range: 0...3.0,
                         onVolumeChange: { onVolumeChange($0) },
                         onDoubleClick: { onResetVolume() }
                     )
