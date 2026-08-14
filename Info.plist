@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>MacVolume</string>
+	<string>MacVolume Communication</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIconFile</key>
@@ -19,18 +19,18 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>$(MARKETING_VERSION)</string>
+	<string>3.0</string>
 	<key>CFBundleVersion</key>
-	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<string>1</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.utilities</string>
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSAudioCaptureUsageDescription</key>
-	<string>MacVolume 需要读取各应用的音频数据，以便在本地独立调节每个应用的音量。音频只在设备本地实时混音，不会被录制或上传。</string>
+	<string>MacVolume Communication 需要读取各应用的音频数据，以便在语音或视频通话期间保护其他应用的音量。音频只在设备本地实时混音，不会被录制或上传。</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>MacVolume 需要系统音频访问权限来独立控制每个应用的音量。音频不会被录制或上传。</string>
+	<string>MacVolume Communication 需要系统音频访问权限来识别通话状态并独立控制每个应用的音量。音频不会被录制或上传。</string>
 </dict>
 </plist>

@@ -17,12 +17,14 @@ final class ProcessTapController {
     private nonisolated(unsafe) var _volume: Float = 1.0
     /// Current ramped volume (smoothly approaches _volume)
     private nonisolated(unsafe) var _currentVolume: Float = 1.0
-    /// Transient gain used to undo voice-chat ducking. Kept separate from the
+    /// Transient gain used to undo communication-app ducking. Kept separate from the
     /// user volume so call start/end never changes the value shown in the UI.
     private nonisolated(unsafe) var _duckingCompensationGain: Float = 1.0
     private nonisolated(unsafe) var _currentDuckingCompensationGain: Float = 1.0
     /// User-controlled mute - outputs silence
     private nonisolated(unsafe) var _isMuted: Bool = false
+    /// Lightweight RMS meter used by the generic communication compensator.
+    private nonisolated(unsafe) var _measuredRMSLevel: Float = 0
 
     // MARK: - Non-RT State
 
@@ -50,6 +52,10 @@ final class ProcessTapController {
     var duckingCompensationGain: Float {
         get { _duckingCompensationGain }
         set { _duckingCompensationGain = max(1.0, min(8.0, newValue)) }
+    }
+
+    var measuredRMSLevel: Float {
+        _measuredRMSLevel
     }
 
     // MARK: - Initialization
@@ -306,6 +312,8 @@ final class ProcessTapController {
 
         let inputBufferCount = inputBuffers.count
         let outputBufferCount = outputBuffers.count
+        var levelSumSquares: Float = 0
+        var levelSampleCount = 0
 
         for outputIndex in 0..<outputBufferCount {
             let outputBuffer = outputBuffers[outputIndex]
@@ -338,19 +346,28 @@ final class ProcessTapController {
             for i in 0..<count {
                 currentVol += (targetVol - currentVol) * rampCoefficient
                 currentCompensation += (targetCompensation - currentCompensation) * rampCoefficient
-                var sample = inputSamples[i] * currentVol
+                let inputSample = inputSamples[i]
+                levelSumSquares += inputSample * inputSample
+                levelSampleCount += 1
+                var sample = inputSample * currentVol
                 if targetVol > 1.0 {
                     sample = softLimit(sample)
                 }
-                // Apply ducking compensation after the user-gain limiter. Values
-                // above ±1 are intentional: WeChat's voice processor attenuates
-                // this signal later in the output path.
-                outputSamples[i] = sample * currentCompensation
+                // Apply communication compensation, then keep a final peak guard
+                // only while amplification is active, preserving unity-gain audio.
+                let compensatedSample = sample * currentCompensation
+                outputSamples[i] = (targetVol > 1.0 || targetCompensation > 1.0)
+                    ? softLimit(compensatedSample)
+                    : compensatedSample
             }
         }
 
         _currentVolume = currentVol
         _currentDuckingCompensationGain = currentCompensation
+        if levelSampleCount > 0 {
+            let frameRMS = sqrt(levelSumSquares / Float(levelSampleCount))
+            _measuredRMSLevel = (_measuredRMSLevel * 0.85) + (frameRMS * 0.15)
+        }
     }
 
     /// Soft-knee limiter to avoid clipping above unity gain

@@ -15,7 +15,7 @@ enum CleanMacVolumeApp {
            let existing = NSRunningApplication.runningApplications(
                withBundleIdentifier: bundleID
            ).first(where: { $0.processIdentifier != currentPID }) {
-            NSLog("MacVolume Clean: 已有实例 PID=%d，当前实例退出", existing.processIdentifier)
+            NSLog("MacVolume Communication: 已有实例 PID=%d，当前实例退出", existing.processIdentifier)
             existing.activate(options: [.activateIgnoringOtherApps])
             Darwin.exit(0)
         }
@@ -30,7 +30,7 @@ enum CleanMacVolumeApp {
 
 @MainActor
 private final class CleanAppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
-    private static let statusAutosaveName = "MacVolumeStatusItemV3"
+    private static let statusAutosaveName = "MacVolumeCommunicationStatusItemV1"
 
     private var manager: AudioProcessManager?
     private var statusItem: NSStatusItem?
@@ -51,7 +51,7 @@ private final class CleanAppDelegate: NSObject, NSApplicationDelegate, NSPopover
         statusItem = item
 
         guard let button = item.button else {
-            NSLog("MacVolume Clean: 无法创建菜单栏按钮")
+            NSLog("MacVolume Communication: 无法创建菜单栏按钮")
             return
         }
 
@@ -60,8 +60,8 @@ private final class CleanAppDelegate: NSObject, NSApplicationDelegate, NSPopover
         button.imagePosition = .imageOnly
         button.imageScaling = .scaleProportionallyDown
         button.isBordered = false
-        button.toolTip = "MacVolume"
-        button.setAccessibilityLabel("MacVolume")
+        button.toolTip = "MacVolume Communication"
+        button.setAccessibilityLabel("MacVolume Communication")
         button.target = self
         button.action = #selector(togglePopover(_:))
         button.sendAction(on: [.leftMouseUp])
@@ -81,7 +81,7 @@ private final class CleanAppDelegate: NSObject, NSApplicationDelegate, NSPopover
             }
             .store(in: &cancellables)
 
-        NSLog("MacVolume Clean: 菜单栏音量状态项已创建，系统方形长度，可见=\(item.isVisible)")
+        NSLog("MacVolume Communication: 菜单栏音量状态项已创建，系统方形长度，可见=\(item.isVisible)")
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             self?.recordStatusItemDiagnostic()
         }

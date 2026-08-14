@@ -13,6 +13,8 @@ struct MixerView: View {
             Divider()
             appList
             Divider()
+            communicationSettingsSection
+            Divider()
             footer
         }
         .padding(12)
@@ -171,12 +173,54 @@ struct MixerView: View {
         }
     }
 
+    private var communicationSettingsSection: some View {
+        DisclosureGroup {
+            if manager.communicationConfigApps.isEmpty {
+                Text("拥有输入和输出音频的应用会显示在这里")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                ScrollView {
+                    VStack(spacing: 5) {
+                        ForEach(manager.communicationConfigApps) { app in
+                            Toggle(isOn: Binding(
+                                get: { !manager.isCommunicationExcluded(app) },
+                                set: { enabled in
+                                    manager.setCommunicationExcluded(app, excluded: !enabled)
+                                }
+                            )) {
+                                HStack(spacing: 6) {
+                                    if let icon = app.icon {
+                                        Image(nsImage: icon)
+                                            .resizable()
+                                            .frame(width: 16, height: 16)
+                                    }
+                                    Text(app.name)
+                                        .font(.caption)
+                                        .lineLimit(1)
+                                }
+                            }
+                            .toggleStyle(.switch)
+                            .controlSize(.mini)
+                        }
+                    }
+                }
+                .frame(maxHeight: 120)
+            }
+        } label: {
+            Label("通话保护排除名单", systemImage: "phone.badge.waveform")
+                .font(.caption)
+        }
+    }
+
     // MARK: - Footer
 
     private var footer: some View {
         VStack(spacing: 7) {
-            if manager.isWeChatCallProtectionActive {
-                Label("微信通话中：其他应用音量保护已开启", systemImage: "phone.badge.waveform.fill")
+            if manager.isCommunicationCallProtectionActive {
+                let names = manager.activeCommunicationAppNames.joined(separator: "、")
+                Label("\(names.isEmpty ? "通话" : names) 中：其他应用音量保护已开启", systemImage: "phone.badge.waveform.fill")
                     .font(.caption)
                     .foregroundStyle(.green)
                     .frame(maxWidth: .infinity, alignment: .leading)

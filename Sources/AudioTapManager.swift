@@ -7,6 +7,8 @@ protocol AudioTapManagerProtocol {
     func setVolume(for pid: pid_t, volume: Float)
     func setMute(for pid: pid_t, muted: Bool)
     func setDuckingCompensation(for pid: pid_t, gain: Float)
+    func prepareMetering(for pid: pid_t)
+    func measuredLevel(for pid: pid_t) -> Float?
     func removeTap(for pid: pid_t)
     func removeUnusedTaps(keeping activePIDs: Set<pid_t>)
     func resetAudio()
@@ -178,6 +180,19 @@ class AudioTapManager: AudioTapManagerProtocol {
         }
     }
 
+    func prepareMetering(for pid: pid_t) {
+        queue.async { [weak self] in
+            guard let self else { return }
+            self.ensureTapExists(for: pid)
+        }
+    }
+
+    func measuredLevel(for pid: pid_t) -> Float? {
+        queue.sync {
+            activeTaps[pid]?.measuredRMSLevel
+        }
+    }
+
     func setMute(for pid: pid_t, muted: Bool) {
         queue.async { [weak self] in
             guard let self = self else { return }
@@ -294,6 +309,8 @@ class AudioTapManagerFallback: AudioTapManagerProtocol {
     func setDuckingCompensation(for pid: pid_t, gain: Float) {
         NSLog("MacVolume: Ducking compensation not available on this macOS version")
     }
+    func prepareMetering(for pid: pid_t) {}
+    func measuredLevel(for pid: pid_t) -> Float? { nil }
     func removeTap(for pid: pid_t) {}
     func removeUnusedTaps(keeping activePIDs: Set<pid_t>) {}
     func resetAudio() {}

@@ -16,7 +16,9 @@ class AudioProcessManager: ObservableObject {
     @Published private(set) var outputDevices: [AudioDevice] = []
     @Published private(set) var selectedInputDeviceID: AudioObjectID = .unknown
     @Published private(set) var selectedOutputDeviceID: AudioObjectID = .unknown
-    @Published private(set) var isWeChatCallProtectionActive = false
+    @Published private(set) var isCommunicationCallProtectionActive = false
+    @Published private(set) var activeCommunicationAppNames: [String] = []
+    @Published private(set) var communicationExcludedBundleIDs: Set<String> = []
 
     private let deviceVolume = DeviceVolume()
     private var tapManager: AudioTapManagerProtocol?
@@ -25,18 +27,21 @@ class AudioProcessManager: ObservableObject {
     private let volumeState = VolumeState()
     private var isUpdatingAudioApps = false
     /// 当前存在 Core Audio 进程对象的 PID 集合。
-    /// 这比瞬时的“正在输出”集合稳定，适合绑定 Edge/微信的动态 Helper。
+    /// 这比瞬时的“正在输出”集合稳定，适合绑定各通话软件的动态 Helper。
     private var audioPIDs: Set<pid_t> = []
     private var outputAudioPIDs: Set<pid_t> = []
-    /// 在微信通话期间保持其他应用不被通话模式压低的进程集合。
-    private var callProtectedPIDs: Set<pid_t> = []
-    /// A dedicated +12 dB call-only compensation. It is applied after the
-    /// normal app gain and never to WeChat itself, so saved mixer settings and
-    /// the call volume remain unchanged.
-    private let weChatDuckingCompensationGain: Float = 4.0
-    /// Avoid audible pumping when Core Audio briefly reports an idle input or
-    /// output stream between call packets.
-    private var weChatCallHoldUntil = Date.distantPast
+    /// 在通话期间保持其他应用不被通话模式压低的进程集合。
+    private var communicationProtectedPIDs: Set<pid_t> = []
+    /// 通话补偿的保守起点和安全上限。补偿不改变用户保存的应用音量。
+    private let communicationFallbackGain: Float = 1.5
+    private let communicationMaximumGain: Float = 4.0
+    /// 避免 Core Audio 短暂丢失输入/输出状态时反复开关补偿。
+    private var communicationCallHoldUntil = Date.distantPast
+    private var communicationCandidateSignature: String?
+    private var communicationCandidateCount = 0
+    private var communicationCallAppKeys: Set<String> = []
+    private var communicationBaselineLevels: [pid_t: Float] = [:]
+    private let communicationExcludedDefaultsKey = "MacVolumeCommunication.ExcludedApps"
     private var lastLoggedAudioSignature: String?
     /// 当前运行期间按稳定应用标识保存的目标增益/静音状态。
     /// 不按 PID 保存，避免 Helper 切换后回到 100%。
@@ -65,6 +70,9 @@ class AudioProcessManager: ObservableObject {
         "loginwindow",
         "PowerChime",
         "MacVolume",
+        "MacVolume Communication",
+        "com.ivandrew.macvolume.stable",
+        "com.ivandrew.macvolume.communication",
     ]
 
     private static let systemDaemonPrefixes: [String] = [
@@ -87,6 +95,9 @@ class AudioProcessManager: ObservableObject {
 
     init() {
         NSLog("MacVolume: 启动，PID=\(ProcessInfo.processInfo.processIdentifier)")
+        communicationExcludedBundleIDs = Set(
+            UserDefaults.standard.array(forKey: communicationExcludedDefaultsKey) as? [String] ?? []
+        )
         tapManager = AudioTapManagerFactory.create()
         deviceVolume.onStateChange = { [weak self] in
             self?.syncMasterFromDevice()
@@ -326,45 +337,69 @@ class AudioProcessManager: ObservableObject {
 
         self.audioApps = newApps
 
-        // 微信通话通常由同一应用组下不同 Helper 分别负责输入和输出。只要该
-        // 应用组同时存在输入、输出就视为通话；短暂丢失状态时保持几秒，防止
-        // 补偿增益在通话中反复开关。
-        let weChatGroups = appGroups.filter { groupKey, group in
-            isWeChatIdentifier(groupKey)
-                || isWeChatIdentifier(group.app?.bundleIdentifier ?? "")
-                || isWeChatIdentifier(group.app?.localizedName ?? "")
-        }
-        let weChatOutputPIDs = Set(weChatGroups.flatMap { $0.value.outputPIDs })
-        let weChatInputPIDs = Set(weChatGroups.flatMap { $0.value.inputPIDs })
-        let weChatCallObserved = !weChatOutputPIDs.isEmpty && !weChatInputPIDs.isEmpty
-        if weChatCallObserved {
-            weChatCallHoldUntil = Date().addingTimeInterval(6.0)
-        }
-        let weChatCallActive = weChatCallObserved || Date() < weChatCallHoldUntil
-        let nextProtectedPIDs: Set<pid_t>
-        if weChatCallActive {
-            nextProtectedPIDs = Set(appGroups
-                .filter { groupKey, group in
-                    !isWeChatIdentifier(groupKey)
-                        && !isWeChatIdentifier(group.app?.bundleIdentifier ?? "")
-                        && !isWeChatIdentifier(group.app?.localizedName ?? "")
-                }
-                .flatMap { $0.value.outputPIDs })
+        // 通话候选：同一应用组同时存在输入和输出音频。连续两次观察到
+        // 才启动保护，避免录音/直播软件的瞬时输入状态误触发。
+        let candidateKeys = Set(appGroups.compactMap { groupKey, group -> String? in
+            guard !group.inputPIDs.isEmpty, !group.outputPIDs.isEmpty else { return nil }
+            guard !isCommunicationExcluded(groupKey: groupKey, app: group.app) else { return nil }
+            return groupKey
+        })
+        let candidateSignature = candidateKeys.sorted().joined(separator: ";")
+        if candidateKeys.isEmpty {
+            communicationCandidateSignature = nil
+            communicationCandidateCount = 0
+        } else if candidateSignature == communicationCandidateSignature {
+            communicationCandidateCount += 1
         } else {
-            nextProtectedPIDs = []
+            communicationCandidateSignature = candidateSignature
+            communicationCandidateCount = 1
         }
 
-        for pid in callProtectedPIDs.subtracting(nextProtectedPIDs) {
+        let communicationCallObserved = !candidateKeys.isEmpty && communicationCandidateCount >= 2
+        if communicationCallObserved {
+            communicationCallHoldUntil = Date().addingTimeInterval(6.0)
+            communicationCallAppKeys = candidateKeys
+        }
+        let communicationCallActive = communicationCallObserved || Date() < communicationCallHoldUntil
+        let activeCallKeys = communicationCallActive
+            ? communicationCallAppKeys.union(candidateKeys)
+            : []
+        let nextProtectedPIDs: Set<pid_t> = communicationCallActive
+            ? Set(appGroups
+                .filter { groupKey, group in
+                    !activeCallKeys.contains(groupKey)
+                        && !isCommunicationExcluded(groupKey: groupKey, app: group.app)
+                }
+                .flatMap { $0.value.outputPIDs })
+            : []
+
+        for pid in communicationProtectedPIDs.subtracting(nextProtectedPIDs) {
             tapManager?.setDuckingCompensation(for: pid, gain: 1.0)
         }
-        for pid in nextProtectedPIDs {
-            tapManager?.setDuckingCompensation(for: pid, gain: weChatDuckingCompensationGain)
+        if communicationCallActive {
+            for pid in nextProtectedPIDs {
+                tapManager?.prepareMetering(for: pid)
+                let gain = adaptiveCommunicationGain(for: pid)
+                tapManager?.setDuckingCompensation(for: pid, gain: gain)
+            }
         }
-        if weChatCallActive != isWeChatCallProtectionActive {
-            NSLog("MacVolume: 微信通话保护 \(weChatCallActive ? "开启" : "关闭")，补偿=\(weChatDuckingCompensationGain)x，保护进程数=\(nextProtectedPIDs.count)")
+        communicationBaselineLevels = communicationBaselineLevels.filter { nextProtectedPIDs.contains($0.key) }
+
+        let activeNames = activeCallKeys.compactMap { key in
+            appGroups[key]?.app?.localizedName ?? key.components(separatedBy: ".").last
         }
-        isWeChatCallProtectionActive = weChatCallActive
-        callProtectedPIDs = nextProtectedPIDs
+        if communicationCallActive {
+            activeCommunicationAppNames = Array(Set(activeNames)).sorted()
+        } else {
+            activeCommunicationAppNames = []
+            communicationCallAppKeys = []
+            communicationBaselineLevels.removeAll()
+        }
+        if communicationCallActive != isCommunicationCallProtectionActive {
+            NSLog("MacVolume: 通话保护 \(communicationCallActive ? "开启" : "关闭")，保护应用数=\(nextProtectedPIDs.count)")
+        }
+        isCommunicationCallProtectionActive = communicationCallActive
+        communicationProtectedPIDs = nextProtectedPIDs
 
         for app in newApps {
             applyEffectiveState(to: app)
@@ -514,12 +549,58 @@ class AudioProcessManager: ObservableObject {
         return false
     }
 
-    private func isWeChatIdentifier(_ identifier: String) -> Bool {
-        let normalized = identifier.lowercased()
-        return normalized == "com.tencent.xinwechat"
-            || normalized == "com.tencent.flue.wechatappex"
-            || normalized.contains("wechat")
-            || identifier.contains("微信")
+    var communicationConfigApps: [AudioApp] {
+        audioApps
+            .filter { !$0.name.isEmpty && !isAppHidden($0) }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    func isCommunicationExcluded(_ app: AudioApp) -> Bool {
+        communicationExcludedBundleIDs.contains(communicationIdentifier(for: app))
+    }
+
+    func setCommunicationExcluded(_ app: AudioApp, excluded: Bool) {
+        let identifier = communicationIdentifier(for: app)
+        var next = communicationExcludedBundleIDs
+        if excluded {
+            next.insert(identifier)
+        } else {
+            next.remove(identifier)
+        }
+        communicationExcludedBundleIDs = next
+        UserDefaults.standard.set(Array(next).sorted(), forKey: communicationExcludedDefaultsKey)
+    }
+
+    private func communicationIdentifier(for app: AudioApp) -> String {
+        Self.stableBundleIdentifier(app.bundleIdentifier) ?? app.name
+    }
+
+    private func isCommunicationExcluded(groupKey: String, app: NSRunningApplication?) -> Bool {
+        let identifiers = [
+            groupKey,
+            app?.bundleIdentifier,
+            app?.localizedName
+        ].compactMap { $0 }
+        let defaultExcluded = Set(["MacVolume", "MacVolumeCommunication"])
+        return identifiers.contains {
+            defaultExcluded.contains($0)
+                || defaultHiddenApps.contains($0)
+                || communicationExcludedBundleIDs.contains($0)
+        }
+    }
+
+    private func adaptiveCommunicationGain(for pid: pid_t) -> Float {
+        guard let currentLevel = tapManager?.measuredLevel(for: pid), currentLevel > 0.003 else {
+            return communicationFallbackGain
+        }
+
+        guard let baseline = communicationBaselineLevels[pid], baseline > 0.003 else {
+            communicationBaselineLevels[pid] = currentLevel
+            return communicationFallbackGain
+        }
+
+        let estimatedAttenuation = baseline / max(currentLevel, 0.003)
+        return min(communicationMaximumGain, max(communicationFallbackGain, estimatedAttenuation))
     }
 
     private func stableStateIdentifier(for app: AudioApp) -> String {
@@ -620,7 +701,7 @@ class AudioProcessManager: ObservableObject {
         let bundleID = app.bundleIdentifier ?? ""
 
         // 0. Bundle 路径包含关系：嵌套在主 App 包内的 Helper 归入最近的宿主。
-        // 这覆盖 Edge Helper，也覆盖微信的 com.tencent.flue.WeChatAppEx
+        // 这覆盖 Edge Helper，也覆盖微信等应用的嵌套 Helper
         // 这类 bundle ID 不共享前缀的辅助进程。
         if let appURL = app.bundleURL {
             let appPath = appURL.standardizedFileURL.path
@@ -636,7 +717,7 @@ class AudioProcessManager: ObservableObject {
             }
         }
 
-        // 1. bundleID 前缀包含：子 bundle 归入父应用（如 com.tencent.xinWeChat.WeChatAppEx → com.tencent.xinWeChat）
+        // 1. bundleID 前缀包含：子 bundle 归入父应用
         if !bundleID.isEmpty {
             for other in runningApps where other.processIdentifier != app.processIdentifier {
                 if let otherBundle = other.bundleIdentifier, !otherBundle.isEmpty, bundleID.hasPrefix(otherBundle + ".") {

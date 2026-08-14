@@ -1,11 +1,11 @@
-name: MacVolumeClean
+name: MacVolumeCommunication
 options:
   createIntermediateGroups: true
   deploymentTarget:
     macOS: "14.2"
 
 targets:
-  MacVolumeClean:
+  MacVolumeCommunication:
     type: application
     platform: macOS
     sources:
@@ -19,27 +19,29 @@ targets:
           cp "${SRCROOT}/Resources/AppIcon.icns" "${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/AppIcon.icns"
     settings:
       base:
-        PRODUCT_NAME: MacVolume
-        PRODUCT_BUNDLE_IDENTIFIER: com.ivandrew.macvolume.stable
-        MARKETING_VERSION: "2.15"
-        CURRENT_PROJECT_VERSION: "16"
+        PRODUCT_NAME: MacVolumeCommunication
+        PRODUCT_BUNDLE_IDENTIFIER: com.ivandrew.macvolume.communication
+        MARKETING_VERSION: "3.0"
+        CURRENT_PROJECT_VERSION: "1"
         CODE_SIGN_STYLE: Manual
-        CODE_SIGN_IDENTITY: "MacVolume Local Code Signing"
+        CODE_SIGN_IDENTITY: "-"
         ENABLE_HARDENED_RUNTIME: YES
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: Info.plist
         COMBINE_HIDPI_IMAGES: YES
-        CODE_SIGN_ENTITLEMENTS: MacVolumeClean.entitlements
+        CODE_SIGN_ENTITLEMENTS: MacVolumeCommunication.entitlements
         SWIFT_VERSION: "5.9"
         SWIFT_STRICT_CONCURRENCY: minimal
         MACOSX_DEPLOYMENT_TARGET: "14.2"
     info:
       path: Info.plist
       properties:
-        CFBundleDisplayName: MacVolume
+        CFBundleDisplayName: MacVolume Communication
+        CFBundleShortVersionString: "3.0"
+        CFBundleVersion: "1"
         CFBundleIconFile: AppIcon
         LSApplicationCategoryType: public.app-category.utilities
         LSUIElement: true
         NSHighResolutionCapable: true
-        NSAudioCaptureUsageDescription: MacVolume 需要读取各应用的音频数据，以便在本地独立调节每个应用的音量。音频只在设备本地实时混音，不会被录制或上传。
-        NSMicrophoneUsageDescription: MacVolume 需要系统音频访问权限来独立控制每个应用的音量。音频不会被录制或上传。
+        NSAudioCaptureUsageDescription: MacVolume Communication 需要读取各应用的音频数据，以便在语音或视频通话期间保护其他应用的音量。音频只在设备本地实时混音，不会被录制或上传。
+        NSMicrophoneUsageDescription: MacVolume Communication 需要系统音频访问权限来识别通话状态并独立控制每个应用的音量。音频不会被录制或上传。
