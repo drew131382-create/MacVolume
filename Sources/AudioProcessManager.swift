@@ -23,6 +23,9 @@ class AudioProcessManager: ObservableObject {
     private let deviceVolume = DeviceVolume()
     private var tapManager: AudioTapManagerProtocol?
     private var updateTimer: Timer?
+    private let idleMonitoringInterval: TimeInterval = 15.0
+    private let outputMonitoringInterval: TimeInterval = 4.0
+    private let communicationMonitoringInterval: TimeInterval = 2.0
     private var cancellables = Set<AnyCancellable>()
     private let volumeState = VolumeState()
     private var isUpdatingAudioApps = false
@@ -126,12 +129,6 @@ class AudioProcessManager: ObservableObject {
             await updateAudioApps()
         }
 
-        updateTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                await self?.updateAudioApps()
-            }
-        }
-
         NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didLaunchApplicationNotification)
             .merge(with: NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didTerminateApplicationNotification))
             .sink { [weak self] _ in
@@ -141,7 +138,7 @@ class AudioProcessManager: ObservableObject {
             }
             .store(in: &cancellables)
 
-        // 面板打开（成为 key window）时立即刷新，避免等 2 秒轮询
+        // 主窗口激活时立即刷新，避免等待下一次自适应轮询。
         NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)
             .sink { [weak self] _ in
                 Task { @MainActor [weak self] in
@@ -151,12 +148,37 @@ class AudioProcessManager: ObservableObject {
             .store(in: &cancellables)
     }
 
+    /// Reschedules monitoring based on the amount of audio work currently
+    /// needed. A one-shot timer avoids keeping a fixed 2-second polling loop
+    /// alive while the machine is idle.
+    private func scheduleMonitoringTimer() {
+        updateTimer?.invalidate()
+
+        let interval: TimeInterval
+        if isCommunicationCallProtectionActive || !communicationProtectedPIDs.isEmpty {
+            interval = communicationMonitoringInterval
+        } else if outputAudioPIDs.isEmpty {
+            interval = idleMonitoringInterval
+        } else {
+            interval = outputMonitoringInterval
+        }
+
+        updateTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                await self?.updateAudioApps()
+            }
+        }
+    }
+
     /// 更新应用列表：显示当前存在 Core Audio 进程对象的应用。
     /// 是否正在输出单独记录，不用瞬时状态决定应用是否从列表消失。
     func updateAudioApps() async {
         guard !isUpdatingAudioApps else { return }
         isUpdatingAudioApps = true
-        defer { isUpdatingAudioApps = false }
+        defer {
+            isUpdatingAudioApps = false
+            scheduleMonitoringTimer()
+        }
 
         // Core Audio 的进程属性查询在 macOS 26 上偶尔会阻塞，不能放在主线程。
         let myPID = ProcessInfo.processInfo.processIdentifier
@@ -310,6 +332,7 @@ class AudioProcessManager: ObservableObject {
                 isOutputting: !group.outputPIDs.isEmpty,
                 volume: volume,
                 isMuted: muted,
+                outputPIDs: group.outputPIDs,
                 additionalPids: additional
             )
 
@@ -332,8 +355,11 @@ class AudioProcessManager: ObservableObject {
             NSLog("MacVolume: 应用归并结果 \(newApps.count) 个: \(groupDescriptions)")
         }
 
-        let activePIDs = Set(newApps.flatMap(\.allPids))
-        tapManager?.removeUnusedTaps(keeping: activePIDs)
+        // Keep taps only for non-system process objects that are actually
+        // outputting. Input-only processes and silent helpers should not keep
+        // an aggregate device or real-time IO callback alive.
+        let outputtingAppPIDs = Set(newApps.flatMap(\.outputPIDs))
+        tapManager?.removeUnusedTaps(keeping: outputtingAppPIDs)
 
         self.audioApps = newApps
 
@@ -451,7 +477,7 @@ class AudioProcessManager: ObservableObject {
         let desiredVolume = desiredVolumesByIdentifier[identifier] ?? app.volume
         let desiredMute = desiredMutesByIdentifier[identifier] ?? app.isMuted
 
-        for pid in app.allPids where audioPIDs.contains(pid) {
+        for pid in app.outputPIDs where outputAudioPIDs.contains(pid) {
             tapManager?.setVolume(for: pid, volume: desiredVolume)
             tapManager?.setMute(for: pid, muted: desiredMute)
         }
@@ -496,7 +522,7 @@ class AudioProcessManager: ObservableObject {
         desiredMutesByIdentifier[identifier] = isMuted
         volumeState.setMute(for: app.id, to: isMuted, identifier: identifier)
 
-        for pid in app.allPids where audioPIDs.contains(pid) {
+        for pid in app.outputPIDs where outputAudioPIDs.contains(pid) {
             tapManager?.setMute(for: pid, muted: isMuted)
         }
     }

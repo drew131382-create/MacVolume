@@ -13,6 +13,10 @@ struct AudioApp: Identifiable, Equatable, Hashable {
     let isOutputting: Bool
     var volume: Float  // 0.0 - 3.0, 1.0 = 100%（滑块中点）
     var isMuted: Bool
+    /// Only these process IDs currently contribute audio to the output path.
+    /// Keeping this separate from all Core Audio process objects prevents
+    /// controls and communication taps from attaching to input-only helpers.
+    var outputPIDs: Set<pid_t> = []
     var additionalPids: Set<pid_t> = []
 
     var allPids: Set<pid_t> {
