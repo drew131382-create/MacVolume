@@ -5,7 +5,6 @@ import SwiftUI
 
 struct MixerView: View {
     @EnvironmentObject var manager: AudioProcessManager
-    @State private var launchAtLogin = LaunchAtLogin.isEnabled
 
     var body: some View {
         VStack(spacing: 10) {
@@ -18,7 +17,14 @@ struct MixerView: View {
             footer
         }
         .padding(12)
-        .frame(width: 340)
+        .frame(
+            minWidth: 420,
+            idealWidth: 520,
+            maxWidth: .infinity,
+            minHeight: 560,
+            idealHeight: 760,
+            maxHeight: .infinity
+        )
     }
 
     // MARK: - Audio Devices
@@ -168,7 +174,7 @@ struct MixerView: View {
                     }
                     .padding(.vertical, 2)
                 }
-                .frame(minHeight: 150, maxHeight: 360)
+                .frame(minHeight: 150, maxHeight: .infinity)
             }
         }
     }
@@ -227,26 +233,12 @@ struct MixerView: View {
             }
 
             HStack {
-                Toggle(isOn: $launchAtLogin) {
-                    Text("开机自启动")
-                        .font(.caption)
-                }
-                .toggleStyle(.switch)
-                .controlSize(.small)
-                .onChange(of: launchAtLogin) { _, newValue in
-                    do {
-                        try LaunchAtLogin.setEnabled(newValue)
-                    } catch {
-                        launchAtLogin = LaunchAtLogin.isEnabled
-                    }
-                }
-
-                Spacer()
-
                 Button("退出") {
                     NSApp.terminate(nil)
                 }
                 .font(.caption)
+
+                Spacer()
             }
         }
     }

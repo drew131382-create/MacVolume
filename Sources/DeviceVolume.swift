@@ -1,7 +1,7 @@
 import CoreAudio
 import Foundation
 
-/// A user-selectable Core Audio device shown in the menu-bar panel.
+/// A user-selectable Core Audio device shown in the main application window.
 struct AudioDevice: Identifiable, Equatable, Hashable {
     let id: AudioObjectID
     let uid: String

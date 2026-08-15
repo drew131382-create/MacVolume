@@ -25,7 +25,7 @@
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.utilities</string>
 	<key>LSUIElement</key>
-	<true/>
+	<false/>
 	<key>NSAudioCaptureUsageDescription</key>
 	<string>MacVolume Communication 需要读取各应用的音频数据，以便在语音或视频通话期间保护其他应用的音量。音频只在设备本地实时混音，不会被录制或上传。</string>
 	<key>NSHighResolutionCapable</key>

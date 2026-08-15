@@ -41,7 +41,7 @@ targets:
         CFBundleVersion: "1"
         CFBundleIconFile: AppIcon
         LSApplicationCategoryType: public.app-category.utilities
-        LSUIElement: true
+        LSUIElement: false
         NSHighResolutionCapable: true
         NSAudioCaptureUsageDescription: MacVolume Communication 需要读取各应用的音频数据，以便在语音或视频通话期间保护其他应用的音量。音频只在设备本地实时混音，不会被录制或上传。
         NSMicrophoneUsageDescription: MacVolume Communication 需要系统音频访问权限来识别通话状态并独立控制每个应用的音量。音频不会被录制或上传。

@@ -12,7 +12,7 @@ struct AudioProcessRecord: Sendable {
 
 /// Runs Core Audio process queries in a short-lived helper mode.
 /// Some macOS 26 HAL proxy objects can block a client process indefinitely;
-/// isolating the query lets the main menu-bar app time it out safely.
+/// isolating the query lets the main application time it out safely.
 enum AudioProcessEnumerator {
     static func runCommandLineModeIfNeeded() {
         guard CommandLine.arguments.contains("--enumerate-audio") else { return }

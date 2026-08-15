@@ -8,11 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		084414345FA9E9BFAA7516EF /* AudioProcessManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C70FDB02B8C03F907909B4 /* AudioProcessManager.swift */; };
-		14B4DA0988C16E1B87222C97 /* CleanMacVolumeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13DBE4342EADD30EEF1E9633 /* CleanMacVolumeApp.swift */; };
+		2BEDE7F4616AB823C3B6B475 /* MacVolumeCommunicationApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6255FD4122D81FF155DFCA8 /* MacVolumeCommunicationApp.swift */; };
 		2DD90C344DDBC8115F588434 /* AudioApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E937ACA3C2A1966A84372DFD /* AudioApp.swift */; };
 		3B8379643E465A218437C6C0 /* AudioDeviceID+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8A88DA8CCB237CFC9C08FC0 /* AudioDeviceID+Extensions.swift */; };
 		5932D055FD7ABCD9973CE2AF /* AudioProcessEnumerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2BEF4417F246FFA354351AB /* AudioProcessEnumerator.swift */; };
-		7C347DC0D691F69A4D764803 /* LaunchAtLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1410F905D2ADE24E78D1533B /* LaunchAtLogin.swift */; };
 		A54D24E0E34DCE7CA19511BD /* ProcessTapController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 276D7B7083AAAEDF96E5D14E /* ProcessTapController.swift */; };
 		AB3A3FAF865C1368E252D22C /* VolumeState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6138B536EC981657ECD4D4EC /* VolumeState.swift */; };
 		B4C1137E894737D5A7B1DF1C /* AudioTapManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 374D57A685ABA7607EF929BC /* AudioTapManager.swift */; };
@@ -22,8 +21,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		13DBE4342EADD30EEF1E9633 /* CleanMacVolumeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanMacVolumeApp.swift; sourceTree = "<group>"; };
-		1410F905D2ADE24E78D1533B /* LaunchAtLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLogin.swift; sourceTree = "<group>"; };
 		1DD481FD90460DEC65DEAE63 /* MacVolumeCommunication.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MacVolumeCommunication.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		276D7B7083AAAEDF96E5D14E /* ProcessTapController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessTapController.swift; sourceTree = "<group>"; };
 		36C70FDB02B8C03F907909B4 /* AudioProcessManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioProcessManager.swift; sourceTree = "<group>"; };
@@ -32,6 +29,7 @@
 		7594E5428885C44C9290E3E9 /* AudioObjectID+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AudioObjectID+Extensions.swift"; sourceTree = "<group>"; };
 		7A7A0A5750537E69B8FCFC91 /* DeviceVolume.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceVolume.swift; sourceTree = "<group>"; };
 		A2BEF4417F246FFA354351AB /* AudioProcessEnumerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioProcessEnumerator.swift; sourceTree = "<group>"; };
+		A6255FD4122D81FF155DFCA8 /* MacVolumeCommunicationApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacVolumeCommunicationApp.swift; sourceTree = "<group>"; };
 		C8A88DA8CCB237CFC9C08FC0 /* AudioDeviceID+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AudioDeviceID+Extensions.swift"; sourceTree = "<group>"; };
 		E937ACA3C2A1966A84372DFD /* AudioApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioApp.swift; sourceTree = "<group>"; };
 		ED654FF80CEB2546E8113A8A /* MixerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MixerView.swift; sourceTree = "<group>"; };
@@ -45,9 +43,8 @@
 				A2BEF4417F246FFA354351AB /* AudioProcessEnumerator.swift */,
 				36C70FDB02B8C03F907909B4 /* AudioProcessManager.swift */,
 				374D57A685ABA7607EF929BC /* AudioTapManager.swift */,
-				13DBE4342EADD30EEF1E9633 /* CleanMacVolumeApp.swift */,
 				7A7A0A5750537E69B8FCFC91 /* DeviceVolume.swift */,
-				1410F905D2ADE24E78D1533B /* LaunchAtLogin.swift */,
+				A6255FD4122D81FF155DFCA8 /* MacVolumeCommunicationApp.swift */,
 				ED654FF80CEB2546E8113A8A /* MixerView.swift */,
 				276D7B7083AAAEDF96E5D14E /* ProcessTapController.swift */,
 				6138B536EC981657ECD4D4EC /* VolumeState.swift */,
@@ -167,9 +164,8 @@
 				5932D055FD7ABCD9973CE2AF /* AudioProcessEnumerator.swift in Sources */,
 				084414345FA9E9BFAA7516EF /* AudioProcessManager.swift in Sources */,
 				B4C1137E894737D5A7B1DF1C /* AudioTapManager.swift in Sources */,
-				14B4DA0988C16E1B87222C97 /* CleanMacVolumeApp.swift in Sources */,
 				C13AFF2FB05C50B5598FD7ED /* DeviceVolume.swift in Sources */,
-				7C347DC0D691F69A4D764803 /* LaunchAtLogin.swift in Sources */,
+				2BEDE7F4616AB823C3B6B475 /* MacVolumeCommunicationApp.swift in Sources */,
 				C1B8A4B30DCAE22EFE446477 /* MixerView.swift in Sources */,
 				A54D24E0E34DCE7CA19511BD /* ProcessTapController.swift in Sources */,
 				AB3A3FAF865C1368E252D22C /* VolumeState.swift in Sources */,
