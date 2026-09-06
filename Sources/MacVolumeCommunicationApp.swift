@@ -2,7 +2,7 @@ import AppKit
 import Darwin
 import SwiftUI
 
-/// AppKit entry point for the regular-window MacVolume Communication app.
+/// AppKit entry point for the regular-window SoundMate app.
 @main
 @MainActor
 enum MacVolumeCommunicationApp {
@@ -14,7 +14,7 @@ enum MacVolumeCommunicationApp {
            let existing = NSRunningApplication.runningApplications(
                withBundleIdentifier: bundleID
            ).first(where: { $0.processIdentifier != currentPID }) {
-            NSLog("MacVolume Communication: 已有实例 PID=%d，当前实例退出", existing.processIdentifier)
+            NSLog("SoundMate: 已有实例 PID=%d，当前实例退出", existing.processIdentifier)
             existing.activate(options: [.activateIgnoringOtherApps])
             Darwin.exit(0)
         }
@@ -44,7 +44,7 @@ private final class MacVolumeCommunicationAppDelegate: NSObject, NSApplicationDe
             backing: .buffered,
             defer: false
         )
-        window.title = "MacVolume Communication"
+        window.title = "SoundMate"
         window.minSize = NSSize(width: 420, height: 560)
         window.isReleasedWhenClosed = false
         window.setFrameAutosaveName("MacVolumeCommunicationMainWindowV1")
@@ -56,7 +56,7 @@ private final class MacVolumeCommunicationAppDelegate: NSObject, NSApplicationDe
         mainWindow = window
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        NSLog("MacVolume Communication: 普通应用主窗口已创建")
+        NSLog("SoundMate: 普通应用主窗口已创建")
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -73,15 +73,15 @@ private final class MacVolumeCommunicationAppDelegate: NSObject, NSApplicationDe
         let mainMenu = NSMenu()
 
         let appMenuItem = NSMenuItem()
-        let appMenu = NSMenu(title: "MacVolume Communication")
+        let appMenu = NSMenu(title: "SoundMate")
         appMenu.addItem(
-            withTitle: "关于 MacVolume Communication",
+            withTitle: "About SoundMate",
             action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)),
             keyEquivalent: ""
         )
         appMenu.addItem(.separator())
         appMenu.addItem(
-            withTitle: "隐藏 MacVolume Communication",
+            withTitle: "Hide SoundMate",
             action: #selector(NSApplication.hide(_:)),
             keyEquivalent: "h"
         )
@@ -97,7 +97,7 @@ private final class MacVolumeCommunicationAppDelegate: NSObject, NSApplicationDe
         )
         appMenu.addItem(.separator())
         appMenu.addItem(
-            withTitle: "退出 MacVolume Communication",
+            withTitle: "Quit SoundMate",
             action: #selector(NSApplication.terminate(_:)),
             keyEquivalent: "q"
         )

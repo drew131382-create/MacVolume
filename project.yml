@@ -36,12 +36,12 @@ targets:
     info:
       path: Info.plist
       properties:
-        CFBundleDisplayName: MacVolume Communication
+        CFBundleDisplayName: SoundMate
         CFBundleShortVersionString: "3.0"
         CFBundleVersion: "1"
         CFBundleIconFile: AppIcon
         LSApplicationCategoryType: public.app-category.utilities
         LSUIElement: false
         NSHighResolutionCapable: true
-        NSAudioCaptureUsageDescription: MacVolume Communication 需要读取各应用的音频数据，以便在语音或视频通话期间保护其他应用的音量。音频只在设备本地实时混音，不会被录制或上传。
-        NSMicrophoneUsageDescription: MacVolume Communication 需要系统音频访问权限来识别通话状态并独立控制每个应用的音量。音频不会被录制或上传。
+        NSAudioCaptureUsageDescription: SoundMate needs audio access to protect other apps' volume during voice and video calls. Audio is mixed locally and is never recorded or uploaded.
+        NSMicrophoneUsageDescription: SoundMate needs audio access to detect calls and control each app's volume independently. Audio is never recorded or uploaded.

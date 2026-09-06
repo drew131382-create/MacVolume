@@ -70,6 +70,7 @@ class AudioProcessManager: ObservableObject {
         "PowerChime",
         "MacVolume",
         "MacVolume Communication",
+        "SoundMate",
         "com.ivandrew.macvolume.stable",
         "com.ivandrew.macvolume.communication",
     ]
@@ -599,7 +600,7 @@ class AudioProcessManager: ObservableObject {
             app?.bundleIdentifier,
             app?.localizedName
         ].compactMap { $0 }
-        let defaultExcluded = Set(["MacVolume", "MacVolumeCommunication"])
+        let defaultExcluded = Set(["MacVolume", "MacVolumeCommunication", "SoundMate"])
         return identifiers.contains {
             defaultExcluded.contains($0)
                 || defaultHiddenApps.contains($0)

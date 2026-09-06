@@ -1,7 +1,9 @@
-# MacVolume Communication
+# SoundMate
 
-这是 MacVolume 的通用语音/视频通话保护版本，使用独立的 Bundle ID：
+这是 MacVolume 的通用语音/视频通话保护版本，应用显示名称为 SoundMate，使用独立的 Bundle ID：
 `com.ivandrew.macvolume.communication`。
+
+安装后的应用名称为 `SoundMate.app`；Bundle ID 和可执行文件名保持不变，以保留已有权限与配置。
 
 这是一个普通的 macOS 窗口应用，启动后显示主窗口并出现在 Dock 中，不创建菜单栏状态项或弹出面板。关闭最后一个窗口会退出应用。
 
@@ -23,7 +25,7 @@
 
 ## 验证
 
-退出旧版后打开 `build/MacVolumeCommunication.app`，将以前为补偿而调高的应用滑块恢复到 100%。播放同一段音乐，比较微信通话前、通话中和结束后的响度及音质。也需检查静音、通话中切换输出设备，以及未授权音频捕获时的表现。
+退出旧版后打开 `SoundMate.app`，将以前为补偿而调高的应用滑块恢复到 100%。播放同一段音乐，比较微信通话前、通话中和结束后的响度及音质。也需检查静音、通话中切换输出设备，以及未授权音频捕获时的表现。
 
 本次已通过信号测试和 arm64 编译；当前默认输出设备的 `duck` 属性存在、可写且为 16 字节。尚未完成真实微信通话听音验证。查看日志中的 `Device ducking restore` 可分辨属性被支持还是只启用了原音路由。
 
