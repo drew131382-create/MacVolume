@@ -389,11 +389,18 @@ class AudioProcessManager: ObservableObject {
             : []
         let nextProtectedPIDs: Set<pid_t> = communicationCallActive
             ? Set(appGroups
-                .filter { groupKey, group in
-                    !activeCallKeys.contains(groupKey)
-                        && !isCommunicationExcluded(groupKey: groupKey, app: group.app)
-                }
-                .flatMap { $0.value.outputPIDs })
+                .flatMap { groupKey, group -> [pid_t] in
+                    guard !isCommunicationExcluded(groupKey: groupKey, app: group.app) else { return [] }
+                    guard activeCallKeys.contains(groupKey) else { return Array(group.outputPIDs) }
+                    return group.outputPIDs.filter { pid in
+                        guard let process = processByPID[pid] else { return false }
+                        return CommunicationRoutingPolicy.protectsCallMedia(
+                            ownerBundleID: groupKey,
+                            processBundleID: process.bundleIdentifier,
+                            isInputting: process.isInputting
+                        )
+                    }
+                })
             : []
 
         for pid in communicationProtectedPIDs.subtracting(nextProtectedPIDs) {
@@ -401,6 +408,9 @@ class AudioProcessManager: ObservableObject {
         }
         if communicationCallActive {
             for pid in nextProtectedPIDs {
+                if !communicationProtectedPIDs.contains(pid) {
+                    NSLog("MacVolume: 通话媒体保护 PID=\(pid), bundle=\(processByPID[pid]?.bundleIdentifier ?? "unknown")")
+                }
                 tapManager?.setCallRouting(for: pid, enabled: true)
             }
         }

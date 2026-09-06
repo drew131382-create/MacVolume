@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A10C00000000000000000001 /* CommunicationRoutingPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10C00000000000000000002 /* CommunicationRoutingPolicy.swift */; };
 		084414345FA9E9BFAA7516EF /* AudioProcessManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C70FDB02B8C03F907909B4 /* AudioProcessManager.swift */; };
 		2BEDE7F4616AB823C3B6B475 /* MacVolumeCommunicationApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6255FD4122D81FF155DFCA8 /* MacVolumeCommunicationApp.swift */; };
 		2DD90C344DDBC8115F588434 /* AudioApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E937ACA3C2A1966A84372DFD /* AudioApp.swift */; };
@@ -21,6 +22,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		A10C00000000000000000002 /* CommunicationRoutingPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommunicationRoutingPolicy.swift; sourceTree = "<group>"; };
 		1DD481FD90460DEC65DEAE63 /* MacVolumeCommunication.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MacVolumeCommunication.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		276D7B7083AAAEDF96E5D14E /* ProcessTapController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessTapController.swift; sourceTree = "<group>"; };
 		36C70FDB02B8C03F907909B4 /* AudioProcessManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioProcessManager.swift; sourceTree = "<group>"; };
@@ -43,6 +45,7 @@
 				A2BEF4417F246FFA354351AB /* AudioProcessEnumerator.swift */,
 				36C70FDB02B8C03F907909B4 /* AudioProcessManager.swift */,
 				374D57A685ABA7607EF929BC /* AudioTapManager.swift */,
+				A10C00000000000000000002 /* CommunicationRoutingPolicy.swift */,
 				7A7A0A5750537E69B8FCFC91 /* DeviceVolume.swift */,
 				A6255FD4122D81FF155DFCA8 /* MacVolumeCommunicationApp.swift */,
 				ED654FF80CEB2546E8113A8A /* MixerView.swift */,
@@ -163,6 +166,7 @@
 				E7188103A04FDD2E362258F9 /* AudioObjectID+Extensions.swift in Sources */,
 				5932D055FD7ABCD9973CE2AF /* AudioProcessEnumerator.swift in Sources */,
 				084414345FA9E9BFAA7516EF /* AudioProcessManager.swift in Sources */,
+				A10C00000000000000000001 /* CommunicationRoutingPolicy.swift in Sources */,
 				B4C1137E894737D5A7B1DF1C /* AudioTapManager.swift in Sources */,
 				C13AFF2FB05C50B5598FD7ED /* DeviceVolume.swift in Sources */,
 				2BEDE7F4616AB823C3B6B475 /* MacVolumeCommunicationApp.swift in Sources */,
