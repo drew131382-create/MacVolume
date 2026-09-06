@@ -6,9 +6,7 @@ import Foundation
 protocol AudioTapManagerProtocol {
     func setVolume(for pid: pid_t, volume: Float)
     func setMute(for pid: pid_t, muted: Bool)
-    func setDuckingCompensation(for pid: pid_t, gain: Float)
-    func prepareMetering(for pid: pid_t)
-    func measuredLevel(for pid: pid_t) -> Float?
+    func setCallRouting(for pid: pid_t, enabled: Bool)
     func removeTap(for pid: pid_t)
     func removeUnusedTaps(keeping activePIDs: Set<pid_t>)
     func resetAudio()
@@ -31,9 +29,10 @@ class AudioTapManager: AudioTapManagerProtocol {
 
     private var activeTaps: [pid_t: ProcessTapController] = [:]
     private var tapStates: [pid_t: (volume: Float, muted: Bool)] = [:]
-    /// Extra gain used only to counter voice-chat ducking. This is deliberately
-    /// separate from tapStates so it never changes the user's saved app volume.
-    private var duckingCompensationByPID: [pid_t: Float] = [:]
+    /// Keep unity-gain routes alive during calls without amplifying media.
+    private var callRoutingPIDs: Set<pid_t> = []
+    private var unduckTimer: DispatchSourceTimer?
+    private var lastDefaultDuckingResult: String?
     private let queue = DispatchQueue(label: "com.macvolume.audiotap", qos: .userInteractive)
 
     private var deviceChangeListenerBlock: AudioObjectPropertyListenerBlock?
@@ -44,10 +43,12 @@ class AudioTapManager: AudioTapManagerProtocol {
     )
 
     init() {
+        NSLog("MacVolume: AudioTapManager initialized")
         startDeviceChangeListener()
     }
 
     deinit {
+        unduckTimer?.cancel()
         if let block = deviceChangeListenerBlock {
             AudioObjectRemovePropertyListenerBlock(
                 AudioObjectID(kAudioObjectSystemObject),
@@ -119,13 +120,11 @@ class AudioTapManager: AudioTapManagerProtocol {
         }
 
         do {
-            try tap.activate()
-
             if let state = self.tapStates[pid] {
                 tap.volume = state.volume
                 tap.isMuted = state.muted
             }
-            tap.duckingCompensationGain = self.duckingCompensationByPID[pid] ?? 1.0
+            try tap.activate()
 
             self.activeTaps[pid] = tap
         } catch {
@@ -152,6 +151,7 @@ class AudioTapManager: AudioTapManagerProtocol {
                 self.removeTapIfIdle(for: pid)
             } else {
                 if volume != 1.0 {
+                    self.tapStates[pid] = (volume: volume, muted: false)
                     self.ensureTapExists(for: pid)
                     self.activeTaps[pid]?.volume = volume
                     self.tapStates[pid] = (volume: volume, muted: false)
@@ -160,37 +160,104 @@ class AudioTapManager: AudioTapManagerProtocol {
         }
     }
 
-    /// Applies a transient post-limiter gain to counter the attenuation caused
-    /// by another app's voice-processing unit. The user-selected volume remains
-    /// independent and is restored unchanged when the call ends.
-    func setDuckingCompensation(for pid: pid_t, gain: Float) {
+    func setCallRouting(for pid: pid_t, enabled: Bool) {
         queue.async { [weak self] in
             guard let self else { return }
 
-            let clampedGain = max(1.0, min(8.0, gain))
-            if clampedGain > 1.0 {
-                self.duckingCompensationByPID[pid] = clampedGain
+            if enabled {
+                self.callRoutingPIDs.insert(pid)
+                self.startUnduckTimer()
                 self.ensureTapExists(for: pid)
-                self.activeTaps[pid]?.duckingCompensationGain = clampedGain
             } else {
-                self.duckingCompensationByPID.removeValue(forKey: pid)
-                self.activeTaps[pid]?.duckingCompensationGain = 1.0
+                self.callRoutingPIDs.remove(pid)
                 self.removeTapIfIdle(for: pid)
+                if self.callRoutingPIDs.isEmpty {
+                    self.stopUnduckTimer()
+                }
             }
         }
     }
 
-    func prepareMetering(for pid: pid_t) {
-        queue.async { [weak self] in
+    /// Restore the output device while a call route is active. The timer is lazy
+    /// so simply opening MacVolume never changes the system audio path.
+    private func startUnduckTimer() {
+        guard unduckTimer == nil else { return }
+        NSLog("MacVolume: Starting device ducking restore timer")
+        let timer = DispatchSource.makeTimerSource(queue: queue)
+        timer.schedule(deadline: .now(), repeating: 0.5, leeway: .milliseconds(50))
+        timer.setEventHandler { [weak self] in
             guard let self else { return }
-            self.ensureTapExists(for: pid)
+            if self.lastDefaultDuckingResult == nil {
+                NSLog("MacVolume: Device ducking restore timer fired")
+            }
+            self.restoreDefaultDeviceDucking()
+            // Private aggregate devices can also expose the same property. Keep
+            // their routes at unity while they are owned by this manager.
+            for tap in self.activeTaps.values {
+                tap.restoreDeviceDucking()
+            }
         }
+        unduckTimer = timer
+        timer.resume()
     }
 
-    func measuredLevel(for pid: pid_t) -> Float? {
-        queue.sync {
-            activeTaps[pid]?.measuredRMSLevel
+    private func stopUnduckTimer() {
+        guard unduckTimer != nil else { return }
+        unduckTimer?.cancel()
+        unduckTimer = nil
+        lastDefaultDuckingResult = nil
+        NSLog("MacVolume: Stopped device ducking restore timer")
+    }
+
+    private func restoreDefaultDeviceDucking() {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var deviceID: AudioObjectID = .unknown
+        var size = UInt32(MemoryLayout<AudioObjectID>.size)
+        guard AudioObjectGetPropertyData(
+            AudioObjectID(kAudioObjectSystemObject),
+            &address,
+            0,
+            nil,
+            &size,
+            &deviceID
+        ) == noErr, deviceID != .unknown else { return }
+
+        let selector: AudioObjectPropertySelector = 0x6475636B // 'duck'
+        address = AudioObjectPropertyAddress(
+            mSelector: selector,
+            mScope: kAudioDevicePropertyScopeOutput,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        guard AudioObjectHasProperty(deviceID, &address) else {
+            recordDefaultDuckingResult("hal=unsupported")
+            return
         }
+
+        var settable = DarwinBoolean(false)
+        var propertySize: UInt32 = 0
+        guard AudioObjectIsPropertySettable(deviceID, &address, &settable) == noErr,
+              settable.boolValue,
+              AudioObjectGetPropertyDataSize(deviceID, &address, 0, nil, &propertySize) == noErr,
+              propertySize == 4 * MemoryLayout<Float32>.size else {
+            recordDefaultDuckingResult("hal=read-only-or-unexpected-size")
+            return
+        }
+
+        var unity: [Float32] = [1, 0, 0, 0]
+        let status = unity.withUnsafeMutableBytes {
+            AudioObjectSetPropertyData(deviceID, &address, 0, nil, propertySize, $0.baseAddress!)
+        }
+        recordDefaultDuckingResult("device=\(deviceID),hal=\(status)")
+    }
+
+    private func recordDefaultDuckingResult(_ result: String) {
+        guard result != lastDefaultDuckingResult else { return }
+        lastDefaultDuckingResult = result
+        NSLog("MacVolume: Default device ducking restore: \(result)")
     }
 
     func setMute(for pid: pid_t, muted: Bool) {
@@ -217,7 +284,7 @@ class AudioTapManager: AudioTapManagerProtocol {
 
     func removeTap(for pid: pid_t) {
         queue.async { [weak self] in
-            self?.duckingCompensationByPID.removeValue(forKey: pid)
+            self?.callRoutingPIDs.remove(pid)
             if let tap = self?.activeTaps.removeValue(forKey: pid) {
                 tap.invalidate()
             }
@@ -229,8 +296,9 @@ class AudioTapManager: AudioTapManagerProtocol {
         queue.async { [weak self] in
             guard let self else { return }
 
-            self.duckingCompensationByPID = self.duckingCompensationByPID.filter {
-                activePIDs.contains($0.key)
+            self.callRoutingPIDs.formIntersection(activePIDs)
+            if self.callRoutingPIDs.isEmpty {
+                self.stopUnduckTimer()
             }
             let staleStatePIDs = Set(self.tapStates.keys).subtracting(activePIDs)
             for pid in staleStatePIDs {
@@ -266,7 +334,7 @@ class AudioTapManager: AudioTapManagerProtocol {
     }
 
     private func removeTapIfIdle(for pid: pid_t) {
-        guard duckingCompensationByPID[pid] == nil else { return }
+        guard !callRoutingPIDs.contains(pid) else { return }
         guard let tap = activeTaps[pid], tap.volume == 1.0, !tap.isMuted else { return }
         activeTaps.removeValue(forKey: pid)
         tapStates.removeValue(forKey: pid)
@@ -284,8 +352,11 @@ class AudioTapManager: AudioTapManagerProtocol {
         }
 
         do {
+            if let state = tapStates[pid] {
+                tap.volume = state.volume
+                tap.isMuted = state.muted
+            }
             try tap.activate()
-            tap.duckingCompensationGain = duckingCompensationByPID[pid] ?? 1.0
             activeTaps[pid] = tap
         } catch {
             NSLog("MacVolume: Failed to activate tap for PID \(pid): \(error.localizedDescription)")
@@ -306,11 +377,7 @@ class AudioTapManagerFallback: AudioTapManagerProtocol {
     func setMute(for pid: pid_t, muted: Bool) {
         NSLog("MacVolume: Mute control not available on this macOS version")
     }
-    func setDuckingCompensation(for pid: pid_t, gain: Float) {
-        NSLog("MacVolume: Ducking compensation not available on this macOS version")
-    }
-    func prepareMetering(for pid: pid_t) {}
-    func measuredLevel(for pid: pid_t) -> Float? { nil }
+    func setCallRouting(for pid: pid_t, enabled: Bool) {}
     func removeTap(for pid: pid_t) {}
     func removeUnusedTaps(keeping activePIDs: Set<pid_t>) {}
     func resetAudio() {}

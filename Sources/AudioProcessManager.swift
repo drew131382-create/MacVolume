@@ -35,15 +35,11 @@ class AudioProcessManager: ObservableObject {
     private var outputAudioPIDs: Set<pid_t> = []
     /// 在通话期间保持其他应用不被通话模式压低的进程集合。
     private var communicationProtectedPIDs: Set<pid_t> = []
-    /// 通话补偿的保守起点和安全上限。补偿不改变用户保存的应用音量。
-    private let communicationFallbackGain: Float = 1.5
-    private let communicationMaximumGain: Float = 4.0
     /// 避免 Core Audio 短暂丢失输入/输出状态时反复开关补偿。
     private var communicationCallHoldUntil = Date.distantPast
     private var communicationCandidateSignature: String?
     private var communicationCandidateCount = 0
     private var communicationCallAppKeys: Set<String> = []
-    private var communicationBaselineLevels: [pid_t: Float] = [:]
     private let communicationExcludedDefaultsKey = "MacVolumeCommunication.ExcludedApps"
     private var lastLoggedAudioSignature: String?
     /// 当前运行期间按稳定应用标识保存的目标增益/静音状态。
@@ -400,16 +396,13 @@ class AudioProcessManager: ObservableObject {
             : []
 
         for pid in communicationProtectedPIDs.subtracting(nextProtectedPIDs) {
-            tapManager?.setDuckingCompensation(for: pid, gain: 1.0)
+            tapManager?.setCallRouting(for: pid, enabled: false)
         }
         if communicationCallActive {
             for pid in nextProtectedPIDs {
-                tapManager?.prepareMetering(for: pid)
-                let gain = adaptiveCommunicationGain(for: pid)
-                tapManager?.setDuckingCompensation(for: pid, gain: gain)
+                tapManager?.setCallRouting(for: pid, enabled: true)
             }
         }
-        communicationBaselineLevels = communicationBaselineLevels.filter { nextProtectedPIDs.contains($0.key) }
 
         let activeNames = activeCallKeys.compactMap { key in
             appGroups[key]?.app?.localizedName ?? key.components(separatedBy: ".").last
@@ -419,7 +412,6 @@ class AudioProcessManager: ObservableObject {
         } else {
             activeCommunicationAppNames = []
             communicationCallAppKeys = []
-            communicationBaselineLevels.removeAll()
         }
         if communicationCallActive != isCommunicationCallProtectionActive {
             NSLog("MacVolume: 通话保护 \(communicationCallActive ? "开启" : "关闭")，保护应用数=\(nextProtectedPIDs.count)")
@@ -613,20 +605,6 @@ class AudioProcessManager: ObservableObject {
                 || defaultHiddenApps.contains($0)
                 || communicationExcludedBundleIDs.contains($0)
         }
-    }
-
-    private func adaptiveCommunicationGain(for pid: pid_t) -> Float {
-        guard let currentLevel = tapManager?.measuredLevel(for: pid), currentLevel > 0.003 else {
-            return communicationFallbackGain
-        }
-
-        guard let baseline = communicationBaselineLevels[pid], baseline > 0.003 else {
-            communicationBaselineLevels[pid] = currentLevel
-            return communicationFallbackGain
-        }
-
-        let estimatedAttenuation = baseline / max(currentLevel, 0.003)
-        return min(communicationMaximumGain, max(communicationFallbackGain, estimatedAttenuation))
     }
 
     private func stableStateIdentifier(for app: AudioApp) -> String {

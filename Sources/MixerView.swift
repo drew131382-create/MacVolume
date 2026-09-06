@@ -226,7 +226,7 @@ struct MixerView: View {
         VStack(spacing: 7) {
             if manager.isCommunicationCallProtectionActive {
                 let names = manager.activeCommunicationAppNames.joined(separator: "、")
-                Label("\(names.isEmpty ? "通话" : names) 中：其他应用音量保护已开启", systemImage: "phone.badge.waveform.fill")
+                Label("\(names.isEmpty ? "通话" : names) 中：原音路由已启用（不额外放大）", systemImage: "phone.badge.waveform.fill")
                     .font(.caption)
                     .foregroundStyle(.green)
                     .frame(maxWidth: .infinity, alignment: .leading)

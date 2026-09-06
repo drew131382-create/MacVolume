@@ -17,10 +17,6 @@ final class ProcessTapController {
     private nonisolated(unsafe) var _volume: Float = 1.0
     /// Current ramped volume (smoothly approaches _volume)
     private nonisolated(unsafe) var _currentVolume: Float = 1.0
-    /// Transient gain used to undo communication-app ducking. Kept separate from the
-    /// user volume so call start/end never changes the value shown in the UI.
-    private nonisolated(unsafe) var _duckingCompensationGain: Float = 1.0
-    private nonisolated(unsafe) var _currentDuckingCompensationGain: Float = 1.0
     /// User-controlled mute - outputs silence
     private nonisolated(unsafe) var _isMuted: Bool = false
     /// Lightweight RMS meter used by the generic communication compensator.
@@ -36,6 +32,8 @@ final class ProcessTapController {
     private var deviceProcID: AudioDeviceIOProcID?
     private var tapDescription: CATapDescription?
     private var activated = false
+    private var outputDeviceID: AudioObjectID = .unknown
+    private var lastDuckingResult: String?
 
     // MARK: - Public Properties
 
@@ -47,11 +45,6 @@ final class ProcessTapController {
     var isMuted: Bool {
         get { _isMuted }
         set { _isMuted = newValue }
-    }
-
-    var duckingCompensationGain: Float {
-        get { _duckingCompensationGain }
-        set { _duckingCompensationGain = max(1.0, min(8.0, newValue)) }
     }
 
     var measuredRMSLevel: Float {
@@ -83,6 +76,7 @@ final class ProcessTapController {
         // mutedWhenTapped ensures the app's audio goes through our tap, not directly to output.
         let tapDesc = CATapDescription(stereoMixdownOfProcesses: [processObjectID])
         tapDesc.uuid = UUID()
+        tapDesc.isPrivate = true
         tapDesc.muteBehavior = .mutedWhenTapped
         self.tapDescription = tapDesc
 
@@ -143,7 +137,6 @@ final class ProcessTapController {
         }
 
         _currentVolume = _volume
-        _currentDuckingCompensationGain = _duckingCompensationGain
         activated = true
         logger.info("Tap activated for PID \(self.pid)")
     }
@@ -221,6 +214,7 @@ final class ProcessTapController {
         )
 
         guard status == noErr, deviceID != kAudioObjectUnknown else { return nil }
+        outputDeviceID = deviceID
 
         propertyAddress.mSelector = kAudioDevicePropertyDeviceUID
         var uid: Unmanaged<CFString>?
@@ -291,6 +285,45 @@ final class ProcessTapController {
         }
     }
 
+    /// The undocumented HAL 'duck' property is capability-checked on each device.
+    /// Never amplify samples if it is absent or rejected. Run off the audio callback.
+    /// This clears transient ducking only; it does not change hardware/user volume.
+    func restoreDeviceDucking() {
+        guard activated else { return }
+        var results: [String] = []
+        for device in [outputDeviceID, aggregateDeviceID] where device != .unknown {
+            for scope in [kAudioObjectPropertyScopeOutput, kAudioObjectPropertyScopeGlobal] {
+                var address = AudioObjectPropertyAddress(
+                    mSelector: 0x6475636B, // 'duck', not a documented SDK constant
+                    mScope: scope, mElement: kAudioObjectPropertyElementMain
+                )
+                guard AudioObjectHasProperty(device, &address) else { continue }
+                var settable: DarwinBoolean = false
+                var size: UInt32 = 0
+                guard AudioObjectIsPropertySettable(device, &address, &settable) == noErr,
+                      settable.boolValue,
+                      AudioObjectGetPropertyDataSize(device, &address, 0, nil, &size) == noErr,
+                      size == 4 * MemoryLayout<Float32>.size else { continue }
+                var current = [Float32](repeating: 0, count: 4)
+                let readStatus = current.withUnsafeMutableBytes {
+                    AudioObjectGetPropertyData(device, &address, 0, nil, &size, $0.baseAddress!)
+                }
+                guard readStatus == noErr, current.allSatisfy({ $0.isFinite }) else { continue }
+                // Avoid writing an unchanged property every half second.
+                let unity: [Float32] = [1, 0, 0, 0]
+                let status: OSStatus = current == unity ? noErr : unity.withUnsafeBytes {
+                    AudioObjectSetPropertyData(device, &address, 0, nil, size, $0.baseAddress!)
+                }
+                results.append("\(device)/\(scope):\(status)")
+            }
+        }
+        let result = results.isEmpty ? "unsupported; unity-gain routing only" : results.joined(separator: ",")
+        if result != lastDuckingResult {
+            logger.info("Device ducking restore: \(result)")
+            lastDuckingResult = result
+        }
+    }
+
     // MARK: - RT-Safe Audio Callback
 
     private func processAudio(_ inputBufferList: UnsafePointer<AudioBufferList>, to outputBufferList: UnsafeMutablePointer<AudioBufferList>) {
@@ -307,8 +340,6 @@ final class ProcessTapController {
 
         let targetVol = _volume
         var currentVol = _currentVolume
-        let targetCompensation = _duckingCompensationGain
-        var currentCompensation = _currentDuckingCompensationGain
 
         let inputBufferCount = inputBuffers.count
         let outputBufferCount = outputBuffers.count
@@ -345,34 +376,30 @@ final class ProcessTapController {
 
             for i in 0..<count {
                 currentVol += (targetVol - currentVol) * rampCoefficient
-                currentCompensation += (targetCompensation - currentCompensation) * rampCoefficient
                 let inputSample = inputSamples[i]
                 levelSumSquares += inputSample * inputSample
                 levelSampleCount += 1
-                var sample = inputSample * currentVol
-                if targetVol > 1.0 {
-                    sample = softLimit(sample)
-                }
-                // Apply communication compensation, then keep a final peak guard
-                // only while amplification is active, preserving unity-gain audio.
-                let compensatedSample = sample * currentCompensation
-                outputSamples[i] = (targetVol > 1.0 || targetCompensation > 1.0)
-                    ? softLimit(compensatedSample)
-                    : compensatedSample
+                outputSamples[i] = Self.renderSample(inputSample, gain: currentVol)
             }
         }
 
         _currentVolume = currentVol
-        _currentDuckingCompensationGain = currentCompensation
         if levelSampleCount > 0 {
             let frameRMS = sqrt(levelSumSquares / Float(levelSampleCount))
             _measuredRMSLevel = (_measuredRMSLevel * 0.85) + (frameRMS * 0.15)
         }
     }
 
+    /// Unity/attenuation preserve the waveform, including near-full-scale peaks.
+    /// Only a user-selected boost (including its ramp down) needs a limiter.
+    static func renderSample(_ sample: Float, gain: Float) -> Float {
+        let scaled = sample * gain
+        return gain > 1 ? softLimit(scaled) : scaled
+    }
+
     /// Soft-knee limiter to avoid clipping above unity gain
     @inline(__always)
-    private func softLimit(_ sample: Float) -> Float {
+    private static func softLimit(_ sample: Float) -> Float {
         let threshold: Float = 0.8
         let ceiling: Float = 1.0
 
