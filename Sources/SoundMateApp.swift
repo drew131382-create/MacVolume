@@ -5,7 +5,7 @@ import SwiftUI
 /// AppKit entry point for the regular-window SoundMate app.
 @main
 @MainActor
-enum MacVolumeCommunicationApp {
+enum SoundMateApp {
     static func main() {
         AudioProcessEnumerator.runCommandLineModeIfNeeded()
 
@@ -20,7 +20,7 @@ enum MacVolumeCommunicationApp {
         }
 
         let application = NSApplication.shared
-        let delegate = MacVolumeCommunicationAppDelegate()
+        let delegate = SoundMateAppDelegate()
         application.delegate = delegate
         application.setActivationPolicy(.regular)
         application.run()
@@ -28,7 +28,7 @@ enum MacVolumeCommunicationApp {
 }
 
 @MainActor
-private final class MacVolumeCommunicationAppDelegate: NSObject, NSApplicationDelegate {
+private final class SoundMateAppDelegate: NSObject, NSApplicationDelegate {
     private var manager: AudioProcessManager?
     private var mainWindow: NSWindow?
 
@@ -47,7 +47,7 @@ private final class MacVolumeCommunicationAppDelegate: NSObject, NSApplicationDe
         window.title = "SoundMate"
         window.minSize = NSSize(width: 420, height: 560)
         window.isReleasedWhenClosed = false
-        window.setFrameAutosaveName("MacVolumeCommunicationMainWindowV1")
+        window.setFrameAutosaveName("SoundMateMainWindowV1")
         window.contentViewController = NSHostingController(
             rootView: MixerView().environmentObject(manager)
         )

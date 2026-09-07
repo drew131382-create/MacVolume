@@ -40,7 +40,7 @@ class AudioProcessManager: ObservableObject {
     private var communicationCandidateSignature: String?
     private var communicationCandidateCount = 0
     private var communicationCallAppKeys: Set<String> = []
-    private let communicationExcludedDefaultsKey = "MacVolumeCommunication.ExcludedApps"
+    private let communicationExcludedDefaultsKey = "SoundMate.ExcludedApps"
     private var lastLoggedAudioSignature: String?
     /// 当前运行期间按稳定应用标识保存的目标增益/静音状态。
     /// 不按 PID 保存，避免 Helper 切换后回到 100%。
@@ -68,11 +68,8 @@ class AudioProcessManager: ObservableObject {
         "com.apple.systemsound",
         "loginwindow",
         "PowerChime",
-        "MacVolume",
-        "MacVolume Communication",
         "SoundMate",
-        "com.ivandrew.macvolume.stable",
-        "com.ivandrew.macvolume.communication",
+        "com.ivandrew.soundmate.communication",
     ]
 
     private static let systemDaemonPrefixes: [String] = [
@@ -94,7 +91,7 @@ class AudioProcessManager: ObservableObject {
     ]
 
     init() {
-        NSLog("MacVolume: 启动，PID=\(ProcessInfo.processInfo.processIdentifier)")
+        NSLog("SoundMate: 启动，PID=\(ProcessInfo.processInfo.processIdentifier)")
         communicationExcludedBundleIDs = Set(
             UserDefaults.standard.array(forKey: communicationExcludedDefaultsKey) as? [String] ?? []
         )
@@ -205,7 +202,7 @@ class AudioProcessManager: ObservableObject {
             .joined(separator: ";")
         let snapshotChanged = processSignature != lastLoggedAudioSignature
         if snapshotChanged {
-            NSLog("MacVolume: Core Audio 进程快照 \(activeProcesses.count) 个，正在输出 \(outputAudioPIDs.count) 个，新加入 \(newAudioPIDs.count) 个，移除 \(removedAudioPIDs.count) 个")
+            NSLog("SoundMate: Core Audio 进程快照 \(activeProcesses.count) 个，正在输出 \(outputAudioPIDs.count) 个，新加入 \(newAudioPIDs.count) 个，移除 \(removedAudioPIDs.count) 个")
             lastLoggedAudioSignature = processSignature
         }
 
@@ -349,7 +346,7 @@ class AudioProcessManager: ObservableObject {
                 }
                 .sorted()
                 .joined(separator: "; ")
-            NSLog("MacVolume: 应用归并结果 \(newApps.count) 个: \(groupDescriptions)")
+            NSLog("SoundMate: 应用归并结果 \(newApps.count) 个: \(groupDescriptions)")
         }
 
         // Keep taps only for non-system process objects that are actually
@@ -409,7 +406,7 @@ class AudioProcessManager: ObservableObject {
         if communicationCallActive {
             for pid in nextProtectedPIDs {
                 if !communicationProtectedPIDs.contains(pid) {
-                    NSLog("MacVolume: 通话媒体保护 PID=\(pid), bundle=\(processByPID[pid]?.bundleIdentifier ?? "unknown")")
+                    NSLog("SoundMate: 通话媒体保护 PID=\(pid), bundle=\(processByPID[pid]?.bundleIdentifier ?? "unknown")")
                 }
                 tapManager?.setCallRouting(for: pid, enabled: true)
             }
@@ -425,7 +422,7 @@ class AudioProcessManager: ObservableObject {
             communicationCallAppKeys = []
         }
         if communicationCallActive != isCommunicationCallProtectionActive {
-            NSLog("MacVolume: 通话保护 \(communicationCallActive ? "开启" : "关闭")，保护应用数=\(nextProtectedPIDs.count)")
+            NSLog("SoundMate: 通话保护 \(communicationCallActive ? "开启" : "关闭")，保护应用数=\(nextProtectedPIDs.count)")
         }
         isCommunicationCallProtectionActive = communicationCallActive
         communicationProtectedPIDs = nextProtectedPIDs
@@ -497,7 +494,7 @@ class AudioProcessManager: ObservableObject {
         let identifier = stableStateIdentifier(for: app)
         desiredVolumesByIdentifier[identifier] = clamped
         volumeState.setVolume(for: app.id, to: clamped, identifier: identifier)
-        NSLog("MacVolume: 保存应用增益 \(identifier)=\(Int(clamped * 100))%%")
+        NSLog("SoundMate: 保存应用增益 \(identifier)=\(Int(clamped * 100))%%")
 
         applyEffectiveState(to: audioApps[index])
     }
@@ -610,7 +607,7 @@ class AudioProcessManager: ObservableObject {
             app?.bundleIdentifier,
             app?.localizedName
         ].compactMap { $0 }
-        let defaultExcluded = Set(["MacVolume", "MacVolumeCommunication", "SoundMate"])
+        let defaultExcluded = Set(["SoundMate"])
         return identifiers.contains {
             defaultExcluded.contains($0)
                 || defaultHiddenApps.contains($0)
@@ -642,7 +639,7 @@ class AudioProcessManager: ObservableObject {
 
     private nonisolated static func getAudioProcessesUsingHelper(excluding excludedPID: pid_t) -> [AudioProcessRecord]? {
         guard let executableURL = Bundle.main.executableURL else {
-            NSLog("MacVolume: 无法找到自身可执行文件，不能枚举 Core Audio 进程")
+            NSLog("SoundMate: 无法找到自身可执行文件，不能枚举 Core Audio 进程")
             return nil
         }
 
@@ -656,7 +653,7 @@ class AudioProcessManager: ObservableObject {
         do {
             try process.run()
         } catch {
-            NSLog("MacVolume: 启动 Core Audio 枚举 Helper 失败: \(error.localizedDescription)")
+            NSLog("SoundMate: 启动 Core Audio 枚举 Helper 失败: \(error.localizedDescription)")
             return nil
         }
 
@@ -668,17 +665,17 @@ class AudioProcessManager: ObservableObject {
         guard !process.isRunning else {
             kill(process.processIdentifier, SIGKILL)
             process.waitUntilExit()
-            NSLog("MacVolume: Core Audio 枚举 Helper 超时，已终止子进程")
+            NSLog("SoundMate: Core Audio 枚举 Helper 超时，已终止子进程")
             return nil
         }
 
         let data = output.fileHandleForReading.readDataToEndOfFile()
         guard process.terminationStatus == 0 else {
-            NSLog("MacVolume: Core Audio 枚举 Helper 退出异常，状态码=\(process.terminationStatus)")
+            NSLog("SoundMate: Core Audio 枚举 Helper 退出异常，状态码=\(process.terminationStatus)")
             return nil
         }
         guard let text = String(data: data, encoding: .utf8) else {
-            NSLog("MacVolume: Core Audio 枚举 Helper 输出不是 UTF-8")
+            NSLog("SoundMate: Core Audio 枚举 Helper 输出不是 UTF-8")
             return nil
         }
 
@@ -705,7 +702,7 @@ class AudioProcessManager: ObservableObject {
             )
         }
         if invalidLineCount > 0 {
-            NSLog("MacVolume: Core Audio 枚举 Helper 丢弃 \(invalidLineCount) 条格式错误记录")
+            NSLog("SoundMate: Core Audio 枚举 Helper 丢弃 \(invalidLineCount) 条格式错误记录")
         }
         return records
     }

@@ -12,8 +12,8 @@ struct AppAudioState {
 final class VolumeState: ObservableObject {
     private var states: [pid_t: AppAudioState] = [:]
 
-    private let volumeKeyPrefix = "MacVolumeCommunication.Volume."
-    private let muteKeyPrefix = "MacVolumeCommunication.Mute."
+    private let volumeKeyPrefix = "SoundMate.Volume."
+    private let muteKeyPrefix = "SoundMate.Mute."
 
     func getVolume(for pid: pid_t) -> Float {
         states[pid]?.volume ?? 1.0

@@ -1,11 +1,11 @@
-name: MacVolumeCommunication
+name: SoundMate
 options:
   createIntermediateGroups: true
   deploymentTarget:
     macOS: "14.2"
 
 targets:
-  MacVolumeCommunication:
+  SoundMate:
     type: application
     platform: macOS
     sources:
@@ -19,8 +19,8 @@ targets:
           cp "${SRCROOT}/Resources/AppIcon.icns" "${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/AppIcon.icns"
     settings:
       base:
-        PRODUCT_NAME: MacVolumeCommunication
-        PRODUCT_BUNDLE_IDENTIFIER: com.ivandrew.macvolume.communication
+        PRODUCT_NAME: SoundMate
+        PRODUCT_BUNDLE_IDENTIFIER: com.ivandrew.soundmate.communication
         MARKETING_VERSION: "3.0"
         CURRENT_PROJECT_VERSION: "1"
         CODE_SIGN_STYLE: Manual
@@ -29,7 +29,7 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: Info.plist
         COMBINE_HIDPI_IMAGES: YES
-        CODE_SIGN_ENTITLEMENTS: MacVolumeCommunication.entitlements
+        CODE_SIGN_ENTITLEMENTS: SoundMate.entitlements
         SWIFT_VERSION: "5.9"
         SWIFT_STRICT_CONCURRENCY: minimal
         MACOSX_DEPLOYMENT_TARGET: "14.2"
@@ -37,6 +37,7 @@ targets:
       path: Info.plist
       properties:
         CFBundleDisplayName: SoundMate
+        CFBundleName: SoundMate
         CFBundleShortVersionString: "3.0"
         CFBundleVersion: "1"
         CFBundleIconFile: AppIcon

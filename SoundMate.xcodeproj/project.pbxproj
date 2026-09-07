@@ -1,0 +1,262 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		21E85ADD4BC3A35361FC6F78 /* MixerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39BE1C9B24B51F5F671F964F /* MixerView.swift */; };
+		3735D6D7ED3C0962F4971782 /* AudioApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73EBC2C49A4EEECFA9128F99 /* AudioApp.swift */; };
+		5710EE6359DACCCE5A1A65AE /* VolumeState.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0295C51A66F51700D5C23D5 /* VolumeState.swift */; };
+		58C5AF62BE058F589FC9CAF3 /* CommunicationRoutingPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FAB3EF20D8D896ED6BFF127 /* CommunicationRoutingPolicy.swift */; };
+		63688CCDB96F46CAFDC3BE89 /* AudioTapManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFEF7BD6501AFC8E401E2F10 /* AudioTapManager.swift */; };
+		852F576EB45AD409FE2FF908 /* SoundMateApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E440BD8FE8245F724A764C3 /* SoundMateApp.swift */; };
+		89EAB3881850C11EAD7941FD /* DeviceVolume.swift in Sources */ = {isa = PBXBuildFile; fileRef = D40CB9D4604B239DCE6206F9 /* DeviceVolume.swift */; };
+		8E4C200650B72467A1837782 /* AudioProcessEnumerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FC36F792DDD4F8BD8F0A4C8 /* AudioProcessEnumerator.swift */; };
+		A7A82DEABAF42671BF89239F /* ProcessTapController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2AE9A2F69808B677D07555B /* ProcessTapController.swift */; };
+		B84943BAF5CEFB69E9DFF270 /* AudioDeviceID+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 026A523214EA32A8E6737906 /* AudioDeviceID+Extensions.swift */; };
+		C66EB522F9DEDA1F016570D4 /* AudioProcessManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B133925C832DE1E8DE809E66 /* AudioProcessManager.swift */; };
+		FB6B88129C6DB545D89BAB1D /* AudioObjectID+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CD8EE4E5F0EC5FD2A3DB478 /* AudioObjectID+Extensions.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		026A523214EA32A8E6737906 /* AudioDeviceID+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AudioDeviceID+Extensions.swift"; sourceTree = "<group>"; };
+		39BE1C9B24B51F5F671F964F /* MixerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MixerView.swift; sourceTree = "<group>"; };
+		4FAB3EF20D8D896ED6BFF127 /* CommunicationRoutingPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommunicationRoutingPolicy.swift; sourceTree = "<group>"; };
+		6FC36F792DDD4F8BD8F0A4C8 /* AudioProcessEnumerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioProcessEnumerator.swift; sourceTree = "<group>"; };
+		73EBC2C49A4EEECFA9128F99 /* AudioApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioApp.swift; sourceTree = "<group>"; };
+		8CD8EE4E5F0EC5FD2A3DB478 /* AudioObjectID+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AudioObjectID+Extensions.swift"; sourceTree = "<group>"; };
+		9E440BD8FE8245F724A764C3 /* SoundMateApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundMateApp.swift; sourceTree = "<group>"; };
+		B133925C832DE1E8DE809E66 /* AudioProcessManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioProcessManager.swift; sourceTree = "<group>"; };
+		C0295C51A66F51700D5C23D5 /* VolumeState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeState.swift; sourceTree = "<group>"; };
+		D40CB9D4604B239DCE6206F9 /* DeviceVolume.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceVolume.swift; sourceTree = "<group>"; };
+		E2AE9A2F69808B677D07555B /* ProcessTapController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessTapController.swift; sourceTree = "<group>"; };
+		E59991016B28AB0A04C08237 /* SoundMate.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SoundMate.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EFEF7BD6501AFC8E401E2F10 /* AudioTapManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTapManager.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		0FA67764D8780FC2516D692E /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				73EBC2C49A4EEECFA9128F99 /* AudioApp.swift */,
+				6FC36F792DDD4F8BD8F0A4C8 /* AudioProcessEnumerator.swift */,
+				B133925C832DE1E8DE809E66 /* AudioProcessManager.swift */,
+				EFEF7BD6501AFC8E401E2F10 /* AudioTapManager.swift */,
+				4FAB3EF20D8D896ED6BFF127 /* CommunicationRoutingPolicy.swift */,
+				D40CB9D4604B239DCE6206F9 /* DeviceVolume.swift */,
+				39BE1C9B24B51F5F671F964F /* MixerView.swift */,
+				E2AE9A2F69808B677D07555B /* ProcessTapController.swift */,
+				9E440BD8FE8245F724A764C3 /* SoundMateApp.swift */,
+				C0295C51A66F51700D5C23D5 /* VolumeState.swift */,
+				ECC7E082DDC556092B8726C7 /* Extensions */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		6342FC62E9EC355C880A992A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				E59991016B28AB0A04C08237 /* SoundMate.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A870D7B4155EC487137D7AE2 = {
+			isa = PBXGroup;
+			children = (
+				0FA67764D8780FC2516D692E /* Sources */,
+				6342FC62E9EC355C880A992A /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		ECC7E082DDC556092B8726C7 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				026A523214EA32A8E6737906 /* AudioDeviceID+Extensions.swift */,
+				8CD8EE4E5F0EC5FD2A3DB478 /* AudioObjectID+Extensions.swift */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		E8B5A3092C039B22099B0AF8 /* SoundMate */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6DB1CEA873F225764D2D8293 /* Build configuration list for PBXNativeTarget "SoundMate" */;
+			buildPhases = (
+				84C3FDD9F0E2DF91C19CFD31 /* Sources */,
+				3123F96491B38D44B725E1B4 /* Copy AppIcon */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SoundMate;
+			packageProductDependencies = (
+			);
+			productName = SoundMate;
+			productReference = E59991016B28AB0A04C08237 /* SoundMate.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		0510F4481808459D725E21F8 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					E8B5A3092C039B22099B0AF8 = {
+						ProvisioningStyle = Manual;
+					};
+				};
+			};
+			buildConfigurationList = C22CCE40CABD392AB7979174 /* Build configuration list for PBXProject "SoundMate" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = A870D7B4155EC487137D7AE2;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 6342FC62E9EC355C880A992A /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				E8B5A3092C039B22099B0AF8 /* SoundMate */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		3123F96491B38D44B725E1B4 /* Copy AppIcon */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Copy AppIcon";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "mkdir -p \"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}\"\ncp \"${SRCROOT}/Resources/AppIcon.icns\" \"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/AppIcon.icns\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		84C3FDD9F0E2DF91C19CFD31 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3735D6D7ED3C0962F4971782 /* AudioApp.swift in Sources */,
+				B84943BAF5CEFB69E9DFF270 /* AudioDeviceID+Extensions.swift in Sources */,
+				FB6B88129C6DB545D89BAB1D /* AudioObjectID+Extensions.swift in Sources */,
+				8E4C200650B72467A1837782 /* AudioProcessEnumerator.swift in Sources */,
+				C66EB522F9DEDA1F016570D4 /* AudioProcessManager.swift in Sources */,
+				63688CCDB96F46CAFDC3BE89 /* AudioTapManager.swift in Sources */,
+				58C5AF62BE058F589FC9CAF3 /* CommunicationRoutingPolicy.swift in Sources */,
+				89EAB3881850C11EAD7941FD /* DeviceVolume.swift in Sources */,
+				21E85ADD4BC3A35361FC6F78 /* MixerView.swift in Sources */,
+				A7A82DEABAF42671BF89239F /* ProcessTapController.swift in Sources */,
+				852F576EB45AD409FE2FF908 /* SoundMateApp.swift in Sources */,
+				5710EE6359DACCCE5A1A65AE /* VolumeState.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		46141A067538B6427D8A9C6E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		A0F95A015CA964550B08AA34 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = SoundMate.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
+				MARKETING_VERSION = 3.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ivandrew.soundmate.communication;
+				PRODUCT_NAME = SoundMate;
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+		CDF2599B8A8DCA22E710A633 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = SoundMate.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
+				MARKETING_VERSION = 3.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ivandrew.soundmate.communication;
+				PRODUCT_NAME = SoundMate;
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
+		D2487129B1AB96F8C2C5D9AF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		6DB1CEA873F225764D2D8293 /* Build configuration list for PBXNativeTarget "SoundMate" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CDF2599B8A8DCA22E710A633 /* Debug */,
+				A0F95A015CA964550B08AA34 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		C22CCE40CABD392AB7979174 /* Build configuration list for PBXProject "SoundMate" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				46141A067538B6427D8A9C6E /* Debug */,
+				D2487129B1AB96F8C2C5D9AF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 0510F4481808459D725E21F8 /* Project object */;
+}

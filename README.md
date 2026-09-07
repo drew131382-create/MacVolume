@@ -1,9 +1,9 @@
 # SoundMate
 
 这是 SoundMate 的通用语音/视频通话保护版本，应用显示名称为 SoundMate，使用独立的 Bundle ID：
-`com.ivandrew.macvolume.communication`。
+`com.ivandrew.soundmate.communication`。
 
-安装后的应用名称为 `SoundMate.app`；Bundle ID 和可执行文件名保持不变，以保留已有权限与配置。
+安装后的应用名称为 `SoundMate.app`；Bundle ID、Target 和可执行文件名均已统一为 SoundMate。
 
 SoundMate 与普通应用音量调节工具的核心区别，是专门解决通话过程中 macOS 自动压低其他发声软件音量的问题：通话时保持音乐、视频和系统声音的正常音量，不靠数字增益硬拉，因此避免额外失真。
 
@@ -41,11 +41,11 @@ swiftc -O Tests/CommunicationRoutingTests.swift Sources/CommunicationRoutingPoli
 
 ## 构建
 
-在 Xcode 中打开 `MacVolumeCommunication.xcodeproj`，或使用：
+在 Xcode 中打开 `SoundMate.xcodeproj`，或使用：
 
 ```bash
 xcodegen generate --spec project.yml
-xcodebuild -project MacVolumeCommunication.xcodeproj -scheme MacVolumeCommunication -configuration Release build
+xcodebuild -project SoundMate.xcodeproj -scheme SoundMate -configuration Release build
 ```
 
 当前工程默认生成 `arm64 + x86_64` Universal 版本，最低支持 macOS 14.2。

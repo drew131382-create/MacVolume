@@ -33,7 +33,7 @@ class AudioTapManager: AudioTapManagerProtocol {
     private var callRoutingPIDs: Set<pid_t> = []
     private var unduckTimer: DispatchSourceTimer?
     private var lastDefaultDuckingResult: String?
-    private let queue = DispatchQueue(label: "com.macvolume.audiotap", qos: .userInteractive)
+    private let queue = DispatchQueue(label: "com.soundmate.audiotap", qos: .userInteractive)
 
     private var deviceChangeListenerBlock: AudioObjectPropertyListenerBlock?
     private var deviceChangePropertyAddress = AudioObjectPropertyAddress(
@@ -43,7 +43,7 @@ class AudioTapManager: AudioTapManagerProtocol {
     )
 
     init() {
-        NSLog("MacVolume: AudioTapManager initialized")
+        NSLog("SoundMate: AudioTapManager initialized")
         startDeviceChangeListener()
     }
 
@@ -75,12 +75,12 @@ class AudioTapManager: AudioTapManagerProtocol {
         )
 
         if status != noErr {
-            NSLog("MacVolume: Failed to register device change listener: \(status)")
+            NSLog("SoundMate: Failed to register device change listener: \(status)")
         }
     }
 
     private func handleDeviceChange() {
-        NSLog("MacVolume: Output device changed - recreating taps")
+        NSLog("SoundMate: Output device changed - recreating taps")
 
         for (pid, tap) in activeTaps {
             tapStates[pid] = (volume: tap.volume, muted: tap.isMuted)
@@ -89,7 +89,7 @@ class AudioTapManager: AudioTapManagerProtocol {
         let pidsToRecreate = Array(activeTaps.keys)
         for (pid, tap) in activeTaps {
             tap.invalidate()
-            NSLog("MacVolume: Invalidated tap for PID: \(pid)")
+            NSLog("SoundMate: Invalidated tap for PID: \(pid)")
         }
         activeTaps.removeAll()
 
@@ -114,7 +114,7 @@ class AudioTapManager: AudioTapManagerProtocol {
                     }
                 }
             } else {
-                NSLog("MacVolume: Could not recreate tap for PID \(pid)")
+                NSLog("SoundMate: Could not recreate tap for PID \(pid)")
             }
             return
         }
@@ -136,7 +136,7 @@ class AudioTapManager: AudioTapManagerProtocol {
                     }
                 }
             } else {
-                NSLog("MacVolume: Failed to reactivate tap for PID \(pid): \(error.localizedDescription)")
+                NSLog("SoundMate: Failed to reactivate tap for PID \(pid): \(error.localizedDescription)")
             }
         }
     }
@@ -179,16 +179,16 @@ class AudioTapManager: AudioTapManagerProtocol {
     }
 
     /// Restore the output device while a call route is active. The timer is lazy
-    /// so simply opening MacVolume never changes the system audio path.
+    /// so simply opening SoundMate never changes the system audio path.
     private func startUnduckTimer() {
         guard unduckTimer == nil else { return }
-        NSLog("MacVolume: Starting device ducking restore timer")
+        NSLog("SoundMate: Starting device ducking restore timer")
         let timer = DispatchSource.makeTimerSource(queue: queue)
         timer.schedule(deadline: .now(), repeating: 0.5, leeway: .milliseconds(50))
         timer.setEventHandler { [weak self] in
             guard let self else { return }
             if self.lastDefaultDuckingResult == nil {
-                NSLog("MacVolume: Device ducking restore timer fired")
+                NSLog("SoundMate: Device ducking restore timer fired")
             }
             self.restoreDefaultDeviceDucking()
             // Private aggregate devices can also expose the same property. Keep
@@ -206,7 +206,7 @@ class AudioTapManager: AudioTapManagerProtocol {
         unduckTimer?.cancel()
         unduckTimer = nil
         lastDefaultDuckingResult = nil
-        NSLog("MacVolume: Stopped device ducking restore timer")
+        NSLog("SoundMate: Stopped device ducking restore timer")
     }
 
     private func restoreDefaultDeviceDucking() {
@@ -257,7 +257,7 @@ class AudioTapManager: AudioTapManagerProtocol {
     private func recordDefaultDuckingResult(_ result: String) {
         guard result != lastDefaultDuckingResult else { return }
         lastDefaultDuckingResult = result
-        NSLog("MacVolume: Default device ducking restore: \(result)")
+        NSLog("SoundMate: Default device ducking restore: \(result)")
     }
 
     func setMute(for pid: pid_t, muted: Bool) {
@@ -347,7 +347,7 @@ class AudioTapManager: AudioTapManagerProtocol {
         guard activeTaps[pid] == nil else { return }
 
         guard let tap = ProcessTapController(pid: pid) else {
-            NSLog("MacVolume: Could not create ProcessTapController for PID \(pid)")
+            NSLog("SoundMate: Could not create ProcessTapController for PID \(pid)")
             return
         }
 
@@ -359,7 +359,7 @@ class AudioTapManager: AudioTapManagerProtocol {
             try tap.activate()
             activeTaps[pid] = tap
         } catch {
-            NSLog("MacVolume: Failed to activate tap for PID \(pid): \(error.localizedDescription)")
+            NSLog("SoundMate: Failed to activate tap for PID \(pid): \(error.localizedDescription)")
         }
     }
 
@@ -372,10 +372,10 @@ class AudioTapManager: AudioTapManagerProtocol {
 
 class AudioTapManagerFallback: AudioTapManagerProtocol {
     func setVolume(for pid: pid_t, volume: Float) {
-        NSLog("MacVolume: Volume control not available on this macOS version")
+        NSLog("SoundMate: Volume control not available on this macOS version")
     }
     func setMute(for pid: pid_t, muted: Bool) {
-        NSLog("MacVolume: Mute control not available on this macOS version")
+        NSLog("SoundMate: Mute control not available on this macOS version")
     }
     func setCallRouting(for pid: pid_t, enabled: Bool) {}
     func removeTap(for pid: pid_t) {}
@@ -383,6 +383,6 @@ class AudioTapManagerFallback: AudioTapManagerProtocol {
     func resetAudio() {}
 
     init() {
-        NSLog("MacVolume: AudioTap requires macOS 14.2+")
+        NSLog("SoundMate: AudioTap requires macOS 14.2+")
     }
 }

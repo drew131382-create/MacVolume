@@ -44,7 +44,7 @@ final class DeviceVolume {
     private(set) var selectedOutputDeviceID: AudioObjectID = .unknown
 
     private var deviceID: AudioObjectID = .unknown
-    private let queue = DispatchQueue(label: "com.local.macvolume.devicevolume")
+    private let queue = DispatchQueue(label: "com.local.soundmate.devicevolume")
     private var systemListeners: [(AudioObjectID, AudioObjectPropertyAddress, AudioObjectPropertyListenerBlock)] = []
     private var deviceListeners: [(AudioObjectID, AudioObjectPropertyAddress, AudioObjectPropertyListenerBlock)] = []
 
@@ -109,7 +109,7 @@ final class DeviceVolume {
             &newID
         )
         if status != noErr, logFailure {
-            NSLog("MacVolume: 切换音频设备失败 selector=\(selector), status=\(status)")
+            NSLog("SoundMate: 切换音频设备失败 selector=\(selector), status=\(status)")
         }
         return status == noErr
     }
@@ -282,7 +282,7 @@ final class DeviceVolume {
         return ids.compactMap { id in
             guard isAlive(id), let name = readString(id, selector: kAudioObjectPropertyName) else { return nil }
             // Private process-tap aggregate devices should never be user routes.
-            guard !name.hasPrefix("MacVolume-") else { return nil }
+            guard !name.hasPrefix("SoundMate-") else { return nil }
             let uid = readString(id, selector: kAudioDevicePropertyDeviceUID) ?? String(id)
             let transport = readUInt32(id, selector: kAudioDevicePropertyTransportType) ?? kAudioDeviceTransportTypeUnknown
             return AudioDevice(id: id, uid: uid, name: name, transportType: transport)

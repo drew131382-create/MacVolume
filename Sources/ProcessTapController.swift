@@ -60,7 +60,7 @@ final class ProcessTapController {
 
         self.pid = pid
         self.processObjectID = processObjectID
-        self.logger = Logger(subsystem: "MacVolume", category: "ProcessTapController(\(pid))")
+        self.logger = Logger(subsystem: "SoundMate", category: "ProcessTapController(\(pid))")
     }
 
     deinit {
@@ -96,7 +96,7 @@ final class ProcessTapController {
         let description = buildAggregateDescription(
             outputUID: defaultDeviceUID,
             tapUUID: tapDesc.uuid,
-            name: "MacVolume-\(pid)"
+            name: "SoundMate-\(pid)"
         )
 
         aggregateDeviceID = .unknown
