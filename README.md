@@ -1,6 +1,6 @@
 # SoundMate
 
-这是 MacVolume 的通用语音/视频通话保护版本，应用显示名称为 SoundMate，使用独立的 Bundle ID：
+这是 SoundMate 的通用语音/视频通话保护版本，应用显示名称为 SoundMate，使用独立的 Bundle ID：
 `com.ivandrew.macvolume.communication`。
 
 安装后的应用名称为 `SoundMate.app`；Bundle ID 和可执行文件名保持不变，以保留已有权限与配置。
