@@ -25,7 +25,7 @@
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.utilities</string>
 	<key>LSUIElement</key>
-	<false/>
+	<true/>
 	<key>NSAudioCaptureUsageDescription</key>
 	<string>SoundMate needs audio access to protect other apps' volume during voice and video calls. Audio is mixed locally and is never recorded or uploaded.</string>
 	<key>NSHighResolutionCapable</key>

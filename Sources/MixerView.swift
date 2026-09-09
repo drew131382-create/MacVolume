@@ -21,8 +21,8 @@ struct MixerView: View {
             minWidth: 420,
             idealWidth: 520,
             maxWidth: .infinity,
-            minHeight: 700,
-            idealHeight: 700,
+            minHeight: 600,
+            idealHeight: 600,
             maxHeight: .infinity
         )
     }
@@ -103,6 +103,7 @@ struct MixerView: View {
                     .foregroundStyle(.tertiary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             } else {
+                Spacer(minLength: 0)
                 Picker(title, selection: selection) {
                     if !devices.contains(where: { $0.id == selection.wrappedValue }) {
                         Text("未选择").tag(AudioObjectID.unknown)
@@ -114,7 +115,7 @@ struct MixerView: View {
                 }
                 .labelsHidden()
                 .controlSize(.small)
-                .frame(maxWidth: .infinity)
+                .frame(width: 320, alignment: .leading)
             }
         }
     }

@@ -2,7 +2,7 @@ import AppKit
 import Darwin
 import SwiftUI
 
-/// AppKit entry point for the regular-window SoundMate app.
+/// AppKit entry point for the menu-bar SoundMate app.
 @main
 @MainActor
 enum SoundMateApp {
@@ -22,7 +22,7 @@ enum SoundMateApp {
         let application = NSApplication.shared
         let delegate = SoundMateAppDelegate()
         application.delegate = delegate
-        application.setActivationPolicy(.regular)
+        application.setActivationPolicy(.accessory)
         application.run()
     }
 }
@@ -31,6 +31,7 @@ enum SoundMateApp {
 private final class SoundMateAppDelegate: NSObject, NSApplicationDelegate {
     private var manager: AudioProcessManager?
     private var mainWindow: NSWindow?
+    private var statusItem: NSStatusItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         configureMainMenu()
@@ -38,40 +39,68 @@ private final class SoundMateAppDelegate: NSObject, NSApplicationDelegate {
         let manager = AudioProcessManager()
         self.manager = manager
 
+        configureStatusItem()
+
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 480, height: 700),
+            contentRect: NSRect(x: 0, y: 0, width: 480, height: 600),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
         window.title = "SoundMate"
         // Keep enough vertical room for the communication section and the
-        // footer, while avoiding the oversized 820-point default window.
-        window.minSize = NSSize(width: 420, height: 732)
+        // footer, while keeping the menu-bar panel compact.
+        window.minSize = NSSize(width: 420, height: 632)
         window.isReleasedWhenClosed = false
-        // Bump the autosave key so the previous oversized V3 frame does not
-        // keep being restored for existing installations.
-        window.setFrameAutosaveName("SoundMateMainWindowV4")
+        // Bump the autosave key so the previous oversized frame does not keep
+        // being restored for existing installations.
+        window.setFrameAutosaveName("SoundMateMainWindowV5")
         window.contentViewController = NSHostingController(
             rootView: MixerView().environmentObject(manager)
         )
-        window.setContentSize(NSSize(width: 480, height: 700))
+        window.setContentSize(NSSize(width: 480, height: 600))
         window.center()
 
         mainWindow = window
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
-        NSLog("SoundMate: 普通应用主窗口已创建")
+        window.orderOut(nil)
+        NSLog("SoundMate: 菜单栏状态项和控制窗口已创建")
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        true
+        false
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         mainWindow?.contentViewController = nil
         mainWindow = nil
         manager = nil
+    }
+
+    private func configureStatusItem() {
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        if let button = item.button {
+            button.image = NSImage(
+                systemSymbolName: "waveform.circle.fill",
+                accessibilityDescription: "SoundMate"
+            )
+            button.image?.isTemplate = true
+            button.toolTip = "SoundMate 音频保护"
+            button.target = self
+            button.action = #selector(toggleMainWindow(_:))
+        }
+        statusItem = item
+    }
+
+    @objc private func toggleMainWindow(_ sender: Any?) {
+        guard let window = mainWindow else { return }
+
+        if window.isVisible && window.isKeyWindow {
+            window.orderOut(nil)
+            return
+        }
+
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     private func configureMainMenu() {

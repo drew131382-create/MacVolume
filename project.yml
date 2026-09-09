@@ -42,7 +42,7 @@ targets:
         CFBundleVersion: "1"
         CFBundleIconFile: AppIcon
         LSApplicationCategoryType: public.app-category.utilities
-        LSUIElement: false
+        LSUIElement: true
         NSHighResolutionCapable: true
         NSAudioCaptureUsageDescription: SoundMate needs audio access to protect other apps' volume during voice and video calls. Audio is mixed locally and is never recorded or uploaded.
         NSMicrophoneUsageDescription: SoundMate needs audio access to detect calls and control each app's volume independently. Audio is never recorded or uploaded.
