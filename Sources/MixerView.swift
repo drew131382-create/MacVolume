@@ -8,6 +8,7 @@ struct MixerView: View {
 
     private let deviceLabelWidth: CGFloat = 48
     private let devicePickerWidth: CGFloat = 170
+    private let devicePickerContentWidth: CGFloat = 140
 
     var body: some View {
         VStack(spacing: 10) {
@@ -105,10 +106,13 @@ struct MixerView: View {
                 Spacer(minLength: 0)
                 Picker(title, selection: selection) {
                     if !devices.contains(where: { $0.id == selection.wrappedValue }) {
-                        Text("未选择").tag(AudioObjectID.unknown)
+                        Text("未选择")
+                            .frame(width: devicePickerContentWidth, alignment: .leading)
+                            .tag(AudioObjectID.unknown)
                     }
                     ForEach(devices) { device in
                         Label(device.name, systemImage: device.iconName)
+                            .frame(width: devicePickerContentWidth, alignment: .leading)
                             .tag(device.id)
                     }
                 }
