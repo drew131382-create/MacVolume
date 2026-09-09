@@ -21,8 +21,8 @@ struct MixerView: View {
             minWidth: 420,
             idealWidth: 520,
             maxWidth: .infinity,
-            minHeight: 560,
-            idealHeight: 760,
+            minHeight: 700,
+            idealHeight: 700,
             maxHeight: .infinity
         )
     }

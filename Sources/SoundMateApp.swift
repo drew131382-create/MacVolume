@@ -39,18 +39,23 @@ private final class SoundMateAppDelegate: NSObject, NSApplicationDelegate {
         self.manager = manager
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 520, height: 760),
+            contentRect: NSRect(x: 0, y: 0, width: 480, height: 700),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
         window.title = "SoundMate"
-        window.minSize = NSSize(width: 420, height: 560)
+        // Keep enough vertical room for the communication section and the
+        // footer, while avoiding the oversized 820-point default window.
+        window.minSize = NSSize(width: 420, height: 732)
         window.isReleasedWhenClosed = false
-        window.setFrameAutosaveName("SoundMateMainWindowV1")
+        // Bump the autosave key so the previous oversized V3 frame does not
+        // keep being restored for existing installations.
+        window.setFrameAutosaveName("SoundMateMainWindowV4")
         window.contentViewController = NSHostingController(
             rootView: MixerView().environmentObject(manager)
         )
+        window.setContentSize(NSSize(width: 480, height: 700))
         window.center()
 
         mainWindow = window
