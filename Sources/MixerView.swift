@@ -6,6 +6,9 @@ import SwiftUI
 struct MixerView: View {
     @EnvironmentObject var manager: AudioProcessManager
 
+    private let deviceLabelWidth: CGFloat = 48
+    private let devicePickerWidth: CGFloat = 170
+
     var body: some View {
         VStack(spacing: 10) {
             masterSection
@@ -87,17 +90,17 @@ struct MixerView: View {
         devices: [AudioDevice],
         selection: Binding<AudioObjectID>
     ) -> some View {
-        HStack(spacing: 8) {
+        HStack(alignment: .center, spacing: 8) {
             Label(title, systemImage: icon)
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .frame(width: 48, alignment: .leading)
+                .frame(width: deviceLabelWidth, height: 24, alignment: .leading)
 
             if devices.isEmpty {
                 Text("未找到设备")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxWidth: .infinity, minHeight: 24, alignment: .leading)
             } else {
                 Spacer(minLength: 0)
                 Picker(title, selection: selection) {
@@ -111,7 +114,7 @@ struct MixerView: View {
                 }
                 .labelsHidden()
                 .controlSize(.small)
-                .frame(width: 170, alignment: .leading)
+                .frame(width: devicePickerWidth, height: 24, alignment: .leading)
             }
         }
     }
