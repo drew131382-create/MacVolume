@@ -18,12 +18,8 @@ struct MixerView: View {
         }
         .padding(12)
         .frame(
-            minWidth: 420,
-            idealWidth: 520,
-            maxWidth: .infinity,
-            minHeight: 600,
-            idealHeight: 600,
-            maxHeight: .infinity
+            width: 440,
+            height: 560
         )
     }
 

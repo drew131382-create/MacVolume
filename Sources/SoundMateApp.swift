@@ -30,7 +30,7 @@ enum SoundMateApp {
 @MainActor
 private final class SoundMateAppDelegate: NSObject, NSApplicationDelegate {
     private var manager: AudioProcessManager?
-    private var mainWindow: NSWindow?
+    private var popover: NSPopover?
     private var statusItem: NSStatusItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -41,29 +41,15 @@ private final class SoundMateAppDelegate: NSObject, NSApplicationDelegate {
 
         configureStatusItem()
 
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 480, height: 600),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "SoundMate"
-        // Keep enough vertical room for the communication section and the
-        // footer, while keeping the menu-bar panel compact.
-        window.minSize = NSSize(width: 420, height: 632)
-        window.isReleasedWhenClosed = false
-        // Bump the autosave key so the previous oversized frame does not keep
-        // being restored for existing installations.
-        window.setFrameAutosaveName("SoundMateMainWindowV5")
-        window.contentViewController = NSHostingController(
+        let popover = NSPopover()
+        popover.behavior = .transient
+        popover.animates = true
+        popover.contentSize = NSSize(width: 440, height: 560)
+        popover.contentViewController = NSHostingController(
             rootView: MixerView().environmentObject(manager)
         )
-        window.setContentSize(NSSize(width: 480, height: 600))
-        window.center()
-
-        mainWindow = window
-        window.orderOut(nil)
-        NSLog("SoundMate: 菜单栏状态项和控制窗口已创建")
+        self.popover = popover
+        NSLog("SoundMate: 菜单栏状态项和原生弹窗已创建")
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -71,8 +57,10 @@ private final class SoundMateAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        mainWindow?.contentViewController = nil
-        mainWindow = nil
+        popover?.performClose(nil)
+        popover?.contentViewController = nil
+        popover = nil
+        statusItem = nil
         manager = nil
     }
 
@@ -86,21 +74,24 @@ private final class SoundMateAppDelegate: NSObject, NSApplicationDelegate {
             button.image?.isTemplate = true
             button.toolTip = "SoundMate 音频保护"
             button.target = self
-            button.action = #selector(toggleMainWindow(_:))
+            button.action = #selector(togglePopover(_:))
         }
         statusItem = item
     }
 
-    @objc private func toggleMainWindow(_ sender: Any?) {
-        guard let window = mainWindow else { return }
+    @objc private func togglePopover(_ sender: Any?) {
+        guard let popover, let button = statusItem?.button else { return }
 
-        if window.isVisible && window.isKeyWindow {
-            window.orderOut(nil)
+        if popover.isShown {
+            popover.performClose(sender)
             return
         }
 
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        popover.show(
+            relativeTo: button.bounds,
+            of: button,
+            preferredEdge: .minY
+        )
     }
 
     private func configureMainMenu() {
