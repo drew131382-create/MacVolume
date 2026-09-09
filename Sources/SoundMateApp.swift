@@ -44,7 +44,7 @@ private final class SoundMateAppDelegate: NSObject, NSApplicationDelegate {
         let popover = NSPopover()
         popover.behavior = .transient
         popover.animates = true
-        popover.contentSize = NSSize(width: 440, height: 560)
+        popover.contentSize = NSSize(width: 400, height: 560)
         popover.contentViewController = NSHostingController(
             rootView: MixerView().environmentObject(manager)
         )
