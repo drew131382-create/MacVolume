@@ -18,7 +18,7 @@ struct MixerView: View {
         }
         .padding(12)
         .frame(
-            width: 240,
+            width: 260,
             height: 560
         )
     }
@@ -111,7 +111,7 @@ struct MixerView: View {
                 }
                 .labelsHidden()
                 .controlSize(.small)
-                .frame(width: 150, alignment: .leading)
+                .frame(width: 170, alignment: .leading)
             }
         }
     }
